@@ -23,7 +23,9 @@ Não tenho certeza de que todos os `EditionID` de IoT/LTSC acima correspondem ex
 
 | Componente | Requisito | Verificado por |
 |---|---|---|
-| Windows PowerShell 5.1 | Obrigatório | Kit (env.ps51) |
+| Windows PowerShell 5.1 | Base garantida (vem em todo Windows suportado) | CI Windows real (5.1.26100) + kit (env.ps51) |
+| PowerShell 7 (7.4+) | Opcional, preferido quando instalado em `Program Files\PowerShell\7` (`install.ps1 -PowerShellHost Auto`) | CI Windows real (7.6.9): Pester, WPF das 11 páginas, `-NoGui` |
+| Recursos só do 5.1 (ponto de restauração: `Checkpoint-Computer`, `Get-ComputerRestorePoint`) | No PS 7, executados num `powershell.exe` filho com script fixo | `tests/Windows/F5.Windows.Tests.ps1` (ponte) |
 | WPF (.NET Framework 4.x) | Interface | `tests/Windows` (XamlReader) + checklist |
 | Thread STA | Interface | `tests/Windows` + relançamento automático |
 | CIM `root/cimv2` | Diagnóstico | `tests/Windows` |

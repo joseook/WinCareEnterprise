@@ -2,7 +2,7 @@
 
 Ferramenta open source de diagnóstico e manutenção do Windows para técnicos e ambientes corporativos. PowerShell-first, interface WPF, sem instalador, sem `-ExecutionPolicy Bypass`.
 
-> **Estado: v0.2.0 — F1 a F4 + base corporativa.** Desenvolvido em Linux e testado no **Windows PowerShell 5.1 real** pelo CI (GitHub Actions, Windows Server): Pester, coleta CIM real, renderização WPF das 11 páginas e assinatura Authenticode com `AllSigned`. **Ainda falta homologar em Windows 10/11 cliente** com o checklist interativo (`docs/VALIDACAO-WINDOWS.md`). Matriz em `docs/COMPATIBILIDADE.md`.
+> **Estado: v0.2.0 — F1 a F4 + base corporativa.** Desenvolvido em Linux e testado no **Windows PowerShell 5.1 e no PowerShell 7 em Windows real** pelo CI (GitHub Actions, Windows Server): Pester, coleta CIM real, renderização WPF das 11 páginas e assinatura Authenticode com `AllSigned`. **Ainda falta homologar em Windows 10/11 cliente** com o checklist interativo (`docs/VALIDACAO-WINDOWS.md`). Matriz em `docs/COMPATIBILIDADE.md`.
 
 ## Executar
 
@@ -20,6 +20,7 @@ $f="$env:TEMP\wincare-install.ps1"; iwr https://wincare.joseok.cloud/install.ps1
 
 Os dois só executam o `install.ps1` da versão se o SHA-256 conferir. Ele baixa o pacote do GitHub Releases e verifica a assinatura RSA do manifesto (chave fixada), o hash do zip e o de cada arquivo antes de abrir. Como administrador, a cópia verificada fica em `Program Files\WinCare`. Na interface, **Executar como administrador** reabre pelo mesmo caminho verificado.
 
+- **PowerShell 7:** usado automaticamente quando instalado em `Program Files` (senão, o 5.1 que vem no Windows). Forçar: `install.ps1 -PowerShellHost WindowsPowerShell|PowerShell7`.
 - Máquinas corporativas (`AllSigned`, AppLocker/WDAC, proxy, Intune/GPO): `docs/CORPORATIVO.md`.
 - Sem internet: `docs/OFFLINE.md`. Detalhes da cadeia: `docs/EXECUCAO.md`.
 
