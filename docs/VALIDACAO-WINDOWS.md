@@ -41,3 +41,13 @@ O CI (`windows-latest`, Windows Server) valida a medição real de espaço livre
 4. Repita em seguida → `Skipped / created-recently` referenciando o ponto do passo 3.
 5. `Get-WcRestorePoint` lista os pontos; como usuário padrão → `requires-admin`.
 Registre os resultados em `docs/validacoes/`. Até lá, a detecção por `SPP\Clients` é considerada **não validada**.
+
+## 6. F6 — aplicativos e rede (pendente de validação em cliente real)
+O CI (`tests/Windows/AppsNetwork.Windows.Tests.ps1`) roda as consultas somente leitura e executa de verdade só `network.flush-dns`; winget pode não existir no runner (Windows Server) e o teste aceita a explicação `not-found`. Em VM **Windows 10/11 cliente** com snapshot:
+1. Página Aplicativos como usuário: `winget-updates` lista os mesmos pacotes de `winget upgrade --include-unknown` no terminal (nomes com acento corretos em pt-BR).
+2. Selecione um pacote e execute `apps.winget-upgrade` (perfil Avançado): só ele é atualizado; prévia lista exatamente os ids.
+3. Rode o WinCare como SYSTEM (ex.: `psexec -s`): a seção diz `system-context` e nada roda.
+4. `apps.store-reset` num app de teste (ex.: Calculadora) apaga os dados dele; em build < 19041 a prévia diz "Unavailable".
+5. Rede: com proxy WinHTTP configurado (`netsh winhttp set proxy` feito à mão pelo testador), a seção mostra o servidor; com `user:senha@` no proxy do usuário, a senha aparece mascarada.
+6. `network.renew-ip` e `network.reset-winsock` como administrador; após o winsock, o WinCare **não** reinicia e o resumo pede reinício.
+Registre os resultados em `docs/validacoes/`.

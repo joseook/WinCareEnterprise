@@ -1,0 +1,8 @@
+Nome                    ID                 Versão     Disponível Origem
+------------------------------------------------------------------------
+Bloco de Notas Avançado Exemplo.BlocoNotas 1.0        1.1        winget
+Ferramenta de Ação Útil Exemplo.Acao       2.3.4      2.4.0      winget
+Café Espresso Edição    Exemplo.Cafe       0.9        1.0        winget
+WhatsApp                9NKSQGP7F2NH       2.2345.6.0 2.2350.1.0 msstore
+4 atualizações disponíveis.
+2 pacote(s) têm números de versão que não podem ser determinados. Use --include-unknown para ver todos os resultados.

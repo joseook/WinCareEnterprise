@@ -1,0 +1,15 @@
+   - 
+   \ 
+[2KName                            Id                      Version       Available     Source
+------------------------------------------------------------------------------------------
+Microsoft Edge                  Microsoft.Edge          118.0.2088.46 119.0.2151.44 winget
+Mozilla Firefox (x64 en-US)     Mozilla.Firefox         118.0.1       119.0         winget
+Notepad++ (64-bit x64)          Notepad++.Notepad++     8.5.7         8.5.8         winget
+Some Really Long Application N… Vendor.LongApp          < 2.0         2.1.0         winget
+Microsoft Teams classic         Microsoft.Teams.Classic Unknown       1.6.0.27573   winget
+5 upgrades available.
+
+The following packages have an upgrade available, but require explicit targeting for upgrade:
+Name    Id              Version  Available Source
+-------------------------------------------------
+Discord Discord.Discord 1.0.9015 1.0.9020  winget

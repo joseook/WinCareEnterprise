@@ -59,7 +59,10 @@ Describe 'Catalog field Reversibility' {
     It 'every shipped action declares it honestly' {
         $c = Import-WcActionCatalog -Path (Join-Path $script:SrcRoot 'Core/actions.json')
         foreach ($a in $c) {
-            if ($a.Modifies) { $a.Reversibility | Should -Be 'None' -Because $a.Id } else { $a.Reversibility | Should -Be 'ReadOnly' -Because $a.Id }
+            # F6: the Winsock catalog lives in the registry, which a System Restore point reverts.
+            $expected = 'None'
+            if ($a.Id -eq 'network.reset-winsock') { $expected = 'RestorePoint' }
+            if ($a.Modifies) { $a.Reversibility | Should -Be $expected -Because $a.Id } else { $a.Reversibility | Should -Be 'ReadOnly' -Because $a.Id }
         }
         foreach ($id in 'cleanup.user-temp', 'cleanup.windows-temp', 'storage.optimize-retrim', 'integrity.sfc-scannow', 'integrity.dism-restorehealth') {
             $a = @($c | Where-Object { $_.Id -eq $id })[0]

@@ -23,7 +23,9 @@
         'Modules/WinCare.Elevation.psm1',
         'Modules/WinCare.Baseline.psm1',
         'Modules/WinCare.Health.psm1',
-        'Modules/WinCare.Processes.psm1'
+        'Modules/WinCare.Processes.psm1',
+        'Modules/WinCare.Apps.psm1',
+        'Modules/WinCare.Network.psm1'
     )
     FunctionsToExport    = '*'
     CmdletsToExport      = @()
