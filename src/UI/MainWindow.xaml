@@ -52,6 +52,7 @@
                         <Border Style="{DynamicResource Badge}"><TextBlock x:Name="ProfileBadge" Style="{DynamicResource Text.Muted}"/></Border>
                         <Border Style="{DynamicResource Badge}"><TextBlock x:Name="AdminBadge" Style="{DynamicResource Text.Muted}"/></Border>
                         <Border Style="{DynamicResource Badge}"><TextBlock x:Name="ManagedBadge" Style="{DynamicResource Text.Muted}"/></Border>
+                        <Button x:Name="ElevateButton" Style="{DynamicResource Button.Secondary}" Content="{DynamicResource str.elevate.button}" ToolTip="{DynamicResource str.elevate.tooltip}" Visibility="Collapsed" Margin="8,0,0,0"/>
                         <Button x:Name="RefreshButton" Style="{DynamicResource Button.Primary}" Content="{DynamicResource str.common.refresh}" Margin="8,0,8,0"/>
                         <Button x:Name="CancelButton" Style="{DynamicResource Button.Secondary}" Content="{DynamicResource str.common.cancel}" IsEnabled="False" Margin="0"/>
                     </StackPanel>

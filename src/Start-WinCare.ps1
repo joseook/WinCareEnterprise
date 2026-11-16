@@ -42,6 +42,14 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2.0
 $appRoot = $PSScriptRoot
 
+# AppLocker/WDAC put unapproved scripts in Constrained Language Mode, where WPF and
+# CIM helpers cannot load. Explain it instead of failing deep inside a module; the
+# control is never bypassed (IT must allow the WinCare publisher/package).
+if ([string]$ExecutionContext.SessionState.LanguageMode -ne 'FullLanguage') {
+    Write-Error ("WinCare: PowerShell is in {0} (AppLocker/WDAC). Ask IT to allow the signed WinCare package - see docs/CORPORATIVO.md. / PowerShell em {0} (AppLocker/WDAC): peca a TI para liberar o pacote assinado do WinCare - veja docs/CORPORATIVO.md." -f $ExecutionContext.SessionState.LanguageMode)
+    exit 3
+}
+
 Import-Module (Join-Path $appRoot 'WinCare.psd1') -Force -DisableNameChecking
 $version = (Import-PowerShellDataFile -Path (Join-Path $appRoot 'WinCare.psd1')).ModuleVersion
 $logPath = Initialize-WcLog

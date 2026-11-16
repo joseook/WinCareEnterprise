@@ -1,0 +1,7 @@
+{
+  "elevate.button": "Run as administrator",
+  "elevate.tooltip": "Reopens WinCare with administrator rights (UAC) from a verified copy under Program Files. Needed for actions that require administrator.",
+  "elevate.confirm": "WinCare will ask for administrator permission (UAC) and reopen from a verified copy under Program Files. This window will close.\n\nContinue?",
+  "elevate.cancelled": "Elevation was not started (UAC cancelled or blocked by organization policy). Nothing was changed.",
+  "elevate.not-release": "Running from source: automatic elevation only works with a verified release. Open PowerShell as administrator and start WinCare again."
+}

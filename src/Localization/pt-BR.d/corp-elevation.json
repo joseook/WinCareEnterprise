@@ -1,0 +1,7 @@
+{
+  "elevate.button": "Executar como administrador",
+  "elevate.tooltip": "Reabre o WinCare com privilégios de administrador (UAC), a partir de uma cópia verificada em Arquivos de Programas. Necessário para ações que exigem administrador.",
+  "elevate.confirm": "O WinCare vai pedir permissão de administrador (UAC) e reabrir a partir de uma cópia verificada em Arquivos de Programas. Esta janela será fechada.\n\nContinuar?",
+  "elevate.cancelled": "A elevação não foi iniciada (UAC cancelado ou bloqueado pela política da organização). Nada foi alterado.",
+  "elevate.not-release": "Executando a partir do código-fonte: a elevação automática só funciona em um release verificado. Abra o PowerShell como administrador e inicie o WinCare novamente."
+}

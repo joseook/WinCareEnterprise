@@ -19,7 +19,8 @@
         'Modules/WinCare.Reporting.psm1',
         'Modules/WinCare.Cleanup.psm1',
         'Modules/WinCare.Integrity.psm1',
-        'Modules/WinCare.Office.psm1'
+        'Modules/WinCare.Office.psm1',
+        'Modules/WinCare.Elevation.psm1'
     )
     FunctionsToExport    = '*'
     CmdletsToExport      = @()

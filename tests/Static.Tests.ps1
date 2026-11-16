@@ -17,8 +17,15 @@ BeforeAll {
     . (Join-Path $PSScriptRoot 'TestHelpers.ps1')
     $script:Pt = Get-Content -Raw -Encoding UTF8 (Join-Path $script:SrcRoot 'Localization/pt-BR.json') | ConvertFrom-Json
     $script:En = Get-Content -Raw -Encoding UTF8 (Join-Path $script:SrcRoot 'Localization/en-US.json') | ConvertFrom-Json
-    $script:PtKeys = @($script:Pt.PSObject.Properties.Name)
-    $script:EnKeys = @($script:En.PSObject.Properties.Name)
+    # Base file + module fragments (Localization/<lang>.d/*.json), as Import-WcLocalization loads them.
+    function Get-TestLocKeys([string] $Lang) {
+        $keys = @((Get-Content -Raw -Encoding UTF8 (Join-Path $script:SrcRoot "Localization/$Lang.json") | ConvertFrom-Json).PSObject.Properties.Name)
+        $frag = Join-Path $script:SrcRoot "Localization/$Lang.d"
+        if (Test-Path $frag) { foreach ($f in Get-ChildItem $frag -Filter '*.json') { $keys += @((Get-Content -Raw -Encoding UTF8 $f.FullName | ConvertFrom-Json).PSObject.Properties.Name) } }
+        return $keys
+    }
+    $script:PtKeys = @(Get-TestLocKeys 'pt-BR')
+    $script:EnKeys = @(Get-TestLocKeys 'en-US')
 }
 
 Describe 'PowerShell sources' {
