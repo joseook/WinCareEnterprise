@@ -10,7 +10,7 @@ jobs:
     name: Windows PowerShell 5.1 (Pester + WPF load + real CIM)
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install Pester 5 and PSScriptAnalyzer
         shell: powershell
         run: |
@@ -30,7 +30,7 @@ jobs:
         timeout-minutes: 10
         shell: powershell
         run: .\src\Start-WinCare.ps1 -NoGui -OutputPath .\TestResults\diagnostic.html
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: windows-ps51-results
@@ -39,7 +39,7 @@ jobs:
     name: pwsh on Linux (portable logic only)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install Pester 5 and PSScriptAnalyzer
         shell: pwsh
         run: |
