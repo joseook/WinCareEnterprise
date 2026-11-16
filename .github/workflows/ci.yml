@@ -25,6 +25,18 @@ jobs:
         timeout-minutes: 10
         shell: powershell
         run: powershell.exe -NoProfile -STA -File .\tests\Windows\Export-WinCareScreenshots.ps1
+      - name: Site launcher check (irm on PS 5.1; parse only, never executed)
+        if: always()
+        timeout-minutes: 5
+        shell: powershell
+        run: |
+          $r = Invoke-RestMethod -Uri 'https://wincare.joseok.cloud/run' -UseBasicParsing
+          if ($r -isnot [string]) { throw ('irm returned ' + $r.GetType().FullName) }
+          $errs = $null
+          [void][System.Management.Automation.Language.Parser]::ParseInput($r, [ref]$null, [ref]$errs)
+          if (@($errs).Count -gt 0) { throw 'run does not parse' }
+          if ($r -notmatch "-ExecutionPolicy RemoteSigned -File") { throw 'unexpected launcher content' }
+          Write-Host ('OK: string of {0} chars, parses' -f $r.Length)
       - name: Headless diagnostic report
         if: always()
         timeout-minutes: 10

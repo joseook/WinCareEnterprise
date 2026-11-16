@@ -5,3 +5,16 @@
 - Pendente: rodar o kit em VM Windows 10 e 11 (usuário padrão + admin) e anexar relatórios; corrigir o que aparecer; F3 (limpeza controlada, SFC/DISM/chkdsk com confirmação).
 - Próximo passo: validação no Windows real (docs/VALIDACAO-WINDOWS.md).
 - Commit: ver git log
+
+## 2026-11-16 (2) — linux (Zorin OS)
+- **Feito:**
+  - F3 e F4 (sessão anterior); F5 (antes/depois, ponto de restauração, campo Reversibility).
+  - Repo público e CI Windows real (PS 5.1).
+  - Site `wincare.joseok.cloud` (Pages + HTTPS).
+  - `irm | iex` (`/run`) e comando verificado.
+  - Elevação segura e detecção de GPO/AppLocker.
+  - Reassinatura pela PKI da organização, com teste real de `AllSigned` no CI.
+  - Actions fixadas por SHA e SECURITY-NOTES revisado.
+- **Pendente:** homologação em Windows 10/11 cliente; aceite escrito da exceção T7; integração da F5 na interface (diálogo de confirmação com status do ponto de restauração e grade de pontos existentes).
+- **Próximo passo:** checklist `docs/VALIDACAO-WINDOWS.md` em máquina cliente.
+- **Commit:** ver `git log` (main).
