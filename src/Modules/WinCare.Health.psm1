@@ -906,7 +906,10 @@ function Get-WcHealthFinding {
     if ($null -ne $Metric['UptimeDays'] -and $Metric['UptimeDays'] -ge $Threshold.LongUptimeDays) { $out += New-WcHealthFinding -Id 'health-uptime-long' -Severity Info -Evidence @([int][math]::Floor($Metric['UptimeDays'])) }
     if ($Metric['ClockIssue']) { $out += New-WcHealthFinding -Id 'health-clock' -Severity Warning -Evidence @() }
     $rank = @{ Critical = 0; Warning = 1; Info = 2 }
-    return @($out | Sort-Object -Property @{ Expression = { $rank[$_.Severity] } })
+    # Sort-Object is not stable on Windows PowerShell 5.1: keep the rule order as tie-breaker.
+    $i = 0
+    $keyed = @(foreach ($f in $out) { [pscustomobject]@{ R = $rank[$f.Severity]; I = $i; F = $f }; $i++ })
+    return @($keyed | Sort-Object -Property R, I | ForEach-Object { $_.F })
 }
 
 # ------------------------------------------------------------- page data --
