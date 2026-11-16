@@ -823,7 +823,7 @@ function Register-WcAppsHandler {
     Register-WcActionHandler -Name 'Apps-OpenRepair' -Preview { param($Context) Invoke-WcAppsOpenRepairAction -Context $Context } -Execute { param($Context) Invoke-WcAppsOpenRepairAction -Context $Context -Execute }
 }
 
-Export-ModuleMember -Function @(
+Export-ModuleMember -Function @('Test-WcAppxResetAvailable',
     'Get-WcAppsPageData', 'Register-WcAppsHandler',
     'Get-WcAppsSelection', 'Test-WcWingetPackageId', 'Test-WcAppxPackageFullName', 'ConvertTo-WcPackageSelection',
     'ConvertTo-WcUninstallExecutable', 'ConvertTo-WcInstallDate', 'ConvertTo-WcInstalledProgram', 'ConvertTo-WcBrokenUninstallRow',

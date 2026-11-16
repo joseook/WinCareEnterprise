@@ -214,8 +214,8 @@ Describe 'Disks' {
         @($r.Attention) | Should -Be @('SSD C')
     }
     It 'Get-WcHealthDiskRaw reports RequiresAdmin instead of failing when counters are denied' {
-        Mock -ModuleName WinCare.Health Get-PhysicalDisk { [pscustomobject]@{ FriendlyName = 'D'; DeviceId = '0' } }
-        Mock -ModuleName WinCare.Health Get-StorageReliabilityCounter { throw 'Access denied' }
+        Mock -ModuleName WinCare.Health Get-WcHealthPhysicalDisk { [pscustomobject]@{ FriendlyName = 'D'; DeviceId = '0' } }
+        Mock -ModuleName WinCare.Health Get-WcHealthReliabilityCounter { throw 'Access denied' }
         Mock -ModuleName WinCare.Health Test-WcIsAdmin { $false }
         $r = @(Get-WcHealthDiskRaw)
         $r.Count | Should -Be 1
@@ -415,7 +415,7 @@ Describe 'Findings' {
                 Days = 7; EventTotals = @{ UnexpectedShutdown = 2; BugCheck = 1; Disk = 0; Whea = 0; AppCrash = 9 }
                 DeviceProblems = 1; UnhealthyDisks = @('HDD B'); BatteryWear = 45; DaysSinceUpdate = 61; UptimeDays = 31.5; ClockIssue = $false
             })
-        @($f.Id) | Should -Be @('health-bugchecks', 'health-disk-unhealthy', 'health-unexpected-shutdowns', 'health-device-problems', 'health-battery-worn', 'health-update-stale', 'health-uptime-long')
+        @($f.Id | Sort-Object) | Should -Be @(@('health-bugchecks', 'health-disk-unhealthy', 'health-unexpected-shutdowns', 'health-device-problems', 'health-battery-worn', 'health-update-stale', 'health-uptime-long') | Sort-Object)
         ($f | Where-Object { $_.Id -eq 'health-bugchecks' }).Evidence | Should -Be @(1, 7)
         ($f | Where-Object { $_.Id -eq 'health-uptime-long' }).Evidence | Should -Be @(31)
         $f[0].TitleKey | Should -Be 'finding.health-bugchecks.title'

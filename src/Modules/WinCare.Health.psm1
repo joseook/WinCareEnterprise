@@ -417,16 +417,29 @@ function ConvertTo-WcHealthDiskRows {
     return [pscustomobject]@{ Rows = $rows; Unhealthy = $bad; Attention = $warn }
 }
 
+function Get-WcHealthPhysicalDisk {
+    <# Thinnest wrapper (mockable on Windows: Pester cannot proxy the CDXML cmdlet's enum parameters). #>
+    [CmdletBinding()]
+    param()
+    return @(Get-PhysicalDisk -ErrorAction Stop)
+}
+
+function Get-WcHealthReliabilityCounter {
+    [CmdletBinding()]
+    param($Disk)
+    return (Get-StorageReliabilityCounter -PhysicalDisk $Disk -ErrorAction Stop)
+}
+
 function Get-WcHealthDiskRaw {
     <# Thin. Reliability counters often need admin: reported per disk, never thrown. #>
     [CmdletBinding()]
     param()
     $admin = Test-WcIsAdmin
     $out = @()
-    foreach ($d in @(Get-PhysicalDisk -ErrorAction Stop)) {
+    foreach ($d in @(Get-WcHealthPhysicalDisk)) {
         $c = $null; $st = 'Unavailable'
         try {
-            $c = Get-StorageReliabilityCounter -PhysicalDisk $d -ErrorAction Stop
+            $c = Get-WcHealthReliabilityCounter -Disk $d
             if ($null -ne $c) { $st = 'Ok' }
         }
         catch {
@@ -1147,7 +1160,7 @@ function Register-WcHealthHandler {
     }
 }
 
-Export-ModuleMember -Function @(
+Export-ModuleMember -Function @('Get-WcHealthPhysicalDisk', 'Get-WcHealthReliabilityCounter',
     'Get-WcHealthPageData', 'Register-WcHealthHandler',
     'Get-WcHealthText', 'Format-WcHealthDate', 'Format-WcHealthBytes', 'New-WcHealthSection', 'Get-WcHealthReportDir', 'Test-WcHealthPathUnder',
     'Get-WcHealthEventQuery', 'Get-WcHealthEventCategory', 'ConvertTo-WcHealthProgramName', 'ConvertTo-WcHealthEventSummary', 'Get-WcHealthEventRaw', 'Get-WcHealthEventData',
