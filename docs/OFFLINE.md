@@ -1,19 +1,22 @@
 # Execução offline
 
-1. Em uma máquina com acesso, obtenha do release oficial: `WinCare-<versão>.zip` e `WinCare-<versão>.manifest.json`, e o SHA-256 publicado por outro canal (ticket de mudança, página interna).
-2. Copie para a mídia/compartilhamento junto com o `Install-WinCare.ps1` **assinado**.
-3. No computador alvo:
+1. Em uma máquina com acesso, baixe do release oficial (GitHub Releases, `v<versão>`): `WinCare-<versão>.zip`, `WinCare-<versão>.manifest.json`, `WinCare-<versão>.manifest.json.sig` e `install.ps1`.
+2. Confira o SHA-256 do `install.ps1` com o publicado no README do GitHub (canal independente do site). O SHA-256 do zip também está no README do release e no site.
+3. Copie os quatro arquivos para a mídia/compartilhamento. O `.sig` precisa ficar ao lado do manifesto.
+4. No computador alvo (como administrador, a cópia verificada vai para `Program Files\WinCare`):
 
 ```powershell
-powershell.exe -NoProfile -File .\Install-WinCare.ps1 -Version 0.1.0 `
-  -PackagePath E:\WinCare-0.1.0.zip -ManifestPath E:\WinCare-0.1.0.manifest.json `
-  -ExpectedSha256 <hash recebido por outro canal>
+powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File E:\install.ps1 `
+  -PackagePath E:\WinCare-0.2.0.zip -ManifestPath E:\WinCare-0.2.0.manifest.json `
+  -ExpectedSha256 <hash do zip recebido por outro canal>
 ```
 
 - Nenhuma conexão é feita com `-PackagePath`.
-- As mesmas verificações do modo online valem (assinatura, catálogo, arquivos extras). Falha = nada é executado.
+- As mesmas verificações do modo online valem: assinatura RSA do manifesto com a chave fixada no `install.ps1`, hash do zip, hash de cada arquivo, nenhum arquivo extra. Falha = nada é executado.
 - `-VerifyOnly` verifica e guarda no cache sem abrir a interface (útil para preparar várias máquinas).
 - Cache adulterado é recusado; apague a pasta indicada e rode de novo.
+- `-Elevate` não funciona offline: abra o PowerShell como administrador e rode o comando acima.
+- `AllSigned`/AppLocker: use o pacote reassinado pela TI (`docs/CORPORATIVO.md`).
 
 ## Kit de validação (sem assinatura)
-O kit `WinCare-Validation-<versão>.zip` **não é um release**: não é assinado e o inicializador o rejeita de propósito. Serve só para validar em laboratório/VM — veja `VALIDACAO-WINDOWS.md`. Ele inclui o Pester 5 em `tools/Pester` para máquinas sem internet.
+O kit `WinCare-Validation-<versão>.zip` **não é um release**: não tem manifesto assinado e o inicializador o rejeita de propósito. Serve só para validar em laboratório/VM — veja `VALIDACAO-WINDOWS.md`. Ele inclui o Pester 5 em `tools/Pester` para máquinas sem internet.

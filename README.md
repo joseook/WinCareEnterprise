@@ -1,45 +1,39 @@
 # WinCare Enterprise
 
-Ferramenta open source de diagnóstico e manutenção do Windows para técnicos e ambientes corporativos. PowerShell-first, interface WPF, sem instalador, sem `irm | iex`.
+Ferramenta open source de diagnóstico e manutenção do Windows para técnicos e ambientes corporativos. PowerShell-first, interface WPF, sem instalador, sem `-ExecutionPolicy Bypass`.
 
-> **Estado: v0.1.0 — Fases F1 (fundação) e F2 (diagnóstico).**
-> Desenvolvido e testado em Linux (pwsh 7.7 + Pester 5). **Nenhuma funcionalidade está homologada**: só será considerada validada depois de executada no Windows real com o kit de validação (`docs/VALIDACAO-WINDOWS.md`). Matriz em `docs/COMPATIBILIDADE.md`.
+> **Estado: v0.2.0 — F1 a F4 + base corporativa.** Desenvolvido em Linux e testado no **Windows PowerShell 5.1 real** pelo CI (GitHub Actions, Windows Server): Pester, coleta CIM real, renderização WPF das 11 páginas e assinatura Authenticode com `AllSigned`. **Ainda falta homologar em Windows 10/11 cliente** com o checklist interativo (`docs/VALIDACAO-WINDOWS.md`). Matriz em `docs/COMPATIBILIDADE.md`.
+
+## Executar
+
+Abra o PowerShell (**como administrador** para aplicar otimizações) e cole:
+
+```powershell
+irm https://wincare.joseok.cloud/run | iex
+```
+
+Ou o comando **verificado**, com o hash do `install.ps1` fixado aqui no README (canal independente do site):
+
+```powershell
+{{ONELINER}}
+```
+
+Os dois só executam o `install.ps1` da versão se o SHA-256 conferir. Ele baixa o pacote do GitHub Releases e verifica a assinatura RSA do manifesto (chave fixada), o hash do zip e o de cada arquivo antes de abrir. Como administrador, a cópia verificada fica em `Program Files\WinCare`. Na interface, **Executar como administrador** reabre pelo mesmo caminho verificado.
+
+- Máquinas corporativas (`AllSigned`, AppLocker/WDAC, proxy, Intune/GPO): `docs/CORPORATIVO.md`.
+- Sem internet: `docs/OFFLINE.md`. Detalhes da cadeia: `docs/EXECUCAO.md`.
 
 ## O que já existe
 
 | Área | Situação |
 |---|---|
-| Interface WPF: menu lateral, 11 páginas, tema escuro/claro, pt-BR/en-US, console de logs | Implementado, **não validado no Windows** |
-| Diagnóstico real (somente leitura): Windows/edição/build, CPU (amostrado), RAM, discos + HDD/SSD, tempo ligado, reinicialização pendente, processos, inicialização, sinais de gerenciamento, Defender/Firewall | Implementado, lógica testada no Linux com mocks |
-| Alertas com limiar documentado (sem "nota de saúde") | Implementado e testado |
-| Execução assíncrona (runspace) + cancelamento | Implementado, **não validado no Windows** |
-| Motor de políticas: 4 perfis, catálogo de ações (lista permitida), recursos protegidos, dry-run, confirmação, auditoria | Implementado e testado |
-| Relatórios JSON/HTML + log de auditoria JSONL | Implementado e testado |
-| Bootstrapper com SHA-256 + Authenticode + catálogo assinado, cache versionado, modo offline | Implementado, testado com mocks; **sem certificado e sem release publicado** |
-| Otimização, Office, Integridade (execução), rollback | Planejado (F3–F5); páginas informativas, sem botões falsos |
-
-## Começar
-
-**Validar no Windows (laboratório/VM):** gere o kit e siga `docs/VALIDACAO-WINDOWS.md`.
-
-```bash
-pwsh -File scripts/New-ValidationPackage.ps1   # dist/WinCare-Validation-<versão>.zip + .sha256
-```
-
-**Executar a partir do código (Windows):**
-
-```powershell
-powershell.exe -NoProfile -STA -File .\src\Start-WinCare.ps1          # interface
-powershell.exe -NoProfile -File .\src\Start-WinCare.ps1 -NoGui -OutputPath .\diag.html   # sem interface
-```
-
-**Release assinado (depois da F6):** um comando, sem `iex`, verificado antes de executar:
-
-```powershell
-powershell.exe -NoProfile -File .\Install-WinCare.ps1 -Version 0.1.0
-```
-
-Detalhes em `docs/EXECUCAO.md` e `docs/OFFLINE.md`.
+| Interface WPF: 11 páginas, tema escuro/claro, pt-BR/en-US, console de logs | Renderizada no Windows real (CI); interação manual pendente |
+| Diagnóstico somente leitura: edição/build, CPU, RAM, discos HDD/SSD, inicialização, reinício pendente, sinais de gerenciamento, Defender/Firewall (só leitura) | Validado com CIM real no CI |
+| Manutenção (F3): limpeza de temporários, ReTrim/análise, SFC, DISM, CHKDSK (leitura) — prévia, confirmação por ação, auditoria, histórico | Testado no CI (prévia e execução segura); ações destrutivas não rodam no CI |
+| Office (F4): detecção, suplementos, tempo de abertura do Word (normal × modo seguro), reparo oficial | Testado com mocks + CI sem Office |
+| Políticas: 4 perfis, catálogo de ações em lista permitida, recursos protegidos bloqueados | Testado |
+| Distribuição: release com manifesto assinado (RSA-3072), `irm \| iex`, comando verificado, elevação segura, assinatura pela PKI da organização | Testado; `AllSigned` validado no CI |
+| F5: comparação antes/depois e ponto de restauração | Em andamento |
 
 ## Testes
 
