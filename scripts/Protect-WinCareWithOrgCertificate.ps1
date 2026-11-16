@@ -54,6 +54,18 @@ function Get-WcOrgCertificate {
 
 $script:WcOrgHashFile = 'WinCare.FileHashes.ps1'
 
+function Get-WcOrgFileHash {
+    <# SHA-256 with retries: antivirus often holds freshly copied files for a moment. #>
+    param([string] $Path)
+    for ($i = 1; $i -le 10; $i++) {
+        try { return (Get-FileHash -LiteralPath $Path -Algorithm SHA256 -ErrorAction Stop).Hash }
+        catch {
+            if ($i -eq 10) { throw }
+            Start-Sleep -Milliseconds (300 * $i)
+        }
+    }
+}
+
 function Test-WcOrgFileHashes {
     <# Audit: signed hash list is Valid and every file matches (no missing/extra/modified). Returns problems. #>
     param([Parameter(Mandatory = $true)][string] $Root)
@@ -68,7 +80,7 @@ function Test-WcOrgFileHashes {
         $rel = $f.FullName.Substring($Root.TrimEnd('\', '/').Length + 1).Replace('\', '/')
         $seen[$rel] = $true
         if (-not $expected.ContainsKey($rel)) { $problems += "Extra file: $rel"; continue }
-        if ((Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256).Hash -ne $expected[$rel]) { $problems += "Modified file: $rel" }
+        if ((Get-WcOrgFileHash $f.FullName) -ne $expected[$rel]) { $problems += "Modified file: $rel" }
     }
     foreach ($k in $expected.Keys) { if (-not $seen.ContainsKey($k)) { $problems += "Missing file: $k" } }
     return $problems
@@ -99,7 +111,7 @@ function Protect-WcFolderWithCertificate {
     foreach ($f in @(Get-ChildItem -LiteralPath $Root -Recurse -File | Where-Object { $_.Name -ne $script:WcOrgHashFile } | Sort-Object FullName)) {
         $rel = $f.FullName.Substring($Root.TrimEnd('\', '/').Length + 1).Replace('\', '/')
         if ($rel -notmatch '^[A-Za-z0-9._/ -]+$') { $problems += "Unexpected characters in file name: $rel"; continue }
-        $lines.Add(("    '{0}' = '{1}'" -f $rel, (Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256).Hash))
+        $lines.Add(("    '{0}' = '{1}'" -f $rel, (Get-WcOrgFileHash $f.FullName)))
     }
     $lines.Add('}')
     [System.IO.File]::WriteAllText($list, (($lines -join "`r`n") + "`r`n"), (New-Object System.Text.UTF8Encoding($false)))
