@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "comment": "Phase F6 - page 'apps' (module WinCare.Apps). Selected ids reach the handler through $Context.Selection['<action id>'] (docs/CONTRATO-ACOES.md section 7). winget upgrade never uses --all; Store reset deletes the app's local data; open-repair only opens Settings.",
+  "actions": [
+    { "Id": "apps.winget-upgrade", "Category": "Applications", "Risk": "Medium", "Modifies": true, "RequiresAdmin": false, "Reversible": false, "Reversibility": "None",
+      "RequiresWindows": true, "BlockedWhenManaged": true, "MinBuild": 17763, "Editions": null, "Pages": ["apps"], "Touches": ["InstalledApplications"],
+      "Handler": "Apps-WingetUpgrade", "TitleKey": "action.apps.winget-upgrade", "DescriptionKey": "action.apps.winget-upgrade.desc" },
+    { "Id": "apps.store-reset", "Category": "Applications", "Risk": "Medium", "Modifies": true, "RequiresAdmin": false, "Reversible": false, "Reversibility": "None",
+      "RequiresWindows": true, "BlockedWhenManaged": false, "MinBuild": 19041, "Editions": null, "Pages": ["apps"], "Touches": ["StoreAppData"],
+      "Handler": "Apps-StoreReset", "TitleKey": "action.apps.store-reset", "DescriptionKey": "action.apps.store-reset.desc" },
+    { "Id": "apps.open-repair", "Category": "Applications", "Risk": "Low", "Modifies": false, "RequiresAdmin": false, "Reversible": true, "Reversibility": "ReadOnly",
+      "RequiresWindows": true, "BlockedWhenManaged": false, "MinBuild": 10240, "Editions": null, "Pages": ["apps"],
+      "Handler": "Apps-OpenRepair", "TitleKey": "action.apps.open-repair", "DescriptionKey": "action.apps.open-repair.desc" }
+  ]
+}
