@@ -223,6 +223,29 @@ function Update-WcHeader {
     }
     $w.FindName('ManagedBadge').Text = $managedText
     $w.FindName('VersionText').Text = 'v' + $script:Ui.Version
+    if ($script:Ui.IsAdmin) { $w.FindName('ElevateButton').Visibility = 'Collapsed' } else { $w.FindName('ElevateButton').Visibility = 'Visible' }
+}
+
+function Invoke-WcElevate {
+    <# Restarts WinCare elevated through the verified release (see WinCare.Elevation). #>
+    $title = 'WinCare Enterprise'
+    if ($null -eq (Get-WcReleaseInfo -AppRoot $script:Ui.AppRoot)) {
+        [System.Windows.MessageBox]::Show($script:Ui.Window, (Get-WcString 'elevate.not-release'), $title, 'OK', 'Information') | Out-Null
+        return
+    }
+    $ans = [System.Windows.MessageBox]::Show($script:Ui.Window, (Get-WcString 'elevate.confirm'), $title, 'YesNo', 'Question', 'Yes')
+    if ([string]$ans -ne 'Yes') { return }
+    try { $started = Start-WcElevatedRelaunch -AppRoot $script:Ui.AppRoot }
+    catch {
+        # Win32Exception 1223 = the user cancelled the UAC prompt.
+        Write-WcLog -Level Warning -Category 'UI' -Message ('Elevation not started: ' + $_.Exception.Message) | Out-Null
+        [System.Windows.MessageBox]::Show($script:Ui.Window, (Get-WcString 'elevate.cancelled'), $title, 'OK', 'Warning') | Out-Null
+        return
+    }
+    if ($started) {
+        Write-WcLog -Category 'UI' -Message 'Elevated instance requested; closing this one.' | Out-Null
+        $script:Ui.Window.Close()
+    }
 }
 
 function Update-WcOverview {
@@ -354,11 +377,13 @@ function Update-WcReportsPage {
             ForEach-Object { [pscustomobject]@{ File = $_.Name; Modified = $_.LastWriteTime.ToString('g'); Size = (Format-WcBytes $_.Length) } }
     }
     Set-WcGridRows -Grid $p.FindName('HistoryGrid') -Rows @($files)
-    $hist = foreach ($h in @(Read-WcHistory -Directory (Join-Path (Get-WcDataRoot) 'history') -Last 200)) {
-        $freed = ''; if ($null -ne $h.bytesFreed) { $freed = Format-WcBytes $h.bytesFreed }
+    # @(...) always: no history yields an empty array, one entry a 1-item array.
+    $hist = @(foreach ($h in @(Read-WcHistory -Directory (Join-Path (Get-WcDataRoot) 'history') -Last 200)) {
+        if ($null -eq $h) { continue }
+        $freed = ''; $bf = $h.PSObject.Properties['bytesFreed']; if ($bf -and $null -ne $bf.Value) { $freed = Format-WcBytes $bf.Value }
         [pscustomobject]@{ Modified = ([datetime]$h.time).ToLocalTime().ToString('g'); Action = (Get-WcString ('action.' + $h.action)); Mode = $h.mode; Status = $h.status; Summary = $h.summary; Freed = $freed }
-    }
-    [array]::Reverse($hist)
+    })
+    if ($hist.Count -gt 1) { [array]::Reverse($hist) }
     Set-WcGridRows -Grid $p.FindName('ActionsHistoryGrid') -Rows @($hist)
 }
 
@@ -663,6 +688,7 @@ function Initialize-WcUi {
             } })
     (Get-WcUiElement $window 'RefreshButton').Add_Click({ Invoke-WcUiSafe { Start-WcDiagnostic } })
     (Get-WcUiElement $window 'CancelButton').Add_Click({ Invoke-WcUiSafe { Stop-WcUiJobs } })
+    (Get-WcUiElement $window 'ElevateButton').Add_Click({ Invoke-WcUiSafe { Invoke-WcElevate } })
 
     $timer = New-Object System.Windows.Threading.DispatcherTimer
     $timer.Interval = [TimeSpan]::FromMilliseconds(200)
