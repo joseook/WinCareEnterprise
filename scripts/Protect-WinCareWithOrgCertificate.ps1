@@ -24,11 +24,12 @@
 .EXAMPLE
     .\Protect-WinCareWithOrgCertificate.ps1 -ReleaseDirectory .\v0.3.0 -CertificateThumbprint 0123...ABCD -OutputDirectory D:\deploy\WinCare-0.3.0 -TimestampServer http://timestamp.example.org
 #>
-[CmdletBinding(DefaultParameterSetName = 'Release')]
+# Parameters are validated in the body (not Mandatory) so tests can dot-source the functions.
+[CmdletBinding()]
 param(
-    [Parameter(ParameterSetName = 'Release', Mandatory = $true)][string] $ReleaseDirectory,
-    [Parameter(Mandatory = $true)][string] $CertificateThumbprint,
-    [Parameter(Mandatory = $true)][string] $OutputDirectory,
+    [string] $ReleaseDirectory,
+    [string] $CertificateThumbprint,
+    [string] $OutputDirectory,
     [string] $TimestampServer,
     [string] $BootstrapPath
 )
@@ -80,6 +81,9 @@ function Protect-WcFolderWithCertificate {
 
 # Dot-sourcing (tests) only loads the functions.
 if ($MyInvocation.InvocationName -eq '.') { return }
+foreach ($req in 'ReleaseDirectory', 'CertificateThumbprint', 'OutputDirectory') {
+    if (-not (Get-Variable -Name $req -ValueOnly)) { throw "-$req is required." }
+}
 
 if (-not $BootstrapPath) {
     $candidate = Join-Path $ReleaseDirectory 'install.ps1'

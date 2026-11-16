@@ -47,17 +47,26 @@
 
             <!-- Header -->
             <Border Grid.Row="0" Padding="24,16" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1">
-                <DockPanel LastChildFill="True">
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Border Style="{DynamicResource Badge}"><TextBlock x:Name="ProfileBadge" Style="{DynamicResource Text.Muted}"/></Border>
-                        <Border Style="{DynamicResource Badge}"><TextBlock x:Name="AdminBadge" Style="{DynamicResource Text.Muted}"/></Border>
-                        <Border Style="{DynamicResource Badge}"><TextBlock x:Name="ManagedBadge" Style="{DynamicResource Text.Muted}"/></Border>
-                        <Button x:Name="ElevateButton" Style="{DynamicResource Button.Secondary}" Content="{DynamicResource str.elevate.button}" ToolTip="{DynamicResource str.elevate.tooltip}" Visibility="Collapsed" Margin="8,0,0,0"/>
-                        <Button x:Name="RefreshButton" Style="{DynamicResource Button.Primary}" Content="{DynamicResource str.common.refresh}" Margin="8,0,8,0"/>
+                <!-- Title + status badges on the left (badges wrap below the title, so long titles never collide); actions on the right. -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                        <TextBlock x:Name="PageTitle" Style="{DynamicResource Text.H1}" TextTrimming="CharacterEllipsis"/>
+                        <WrapPanel Orientation="Horizontal" Margin="-4,6,0,0">
+                            <Border Style="{DynamicResource Badge}"><TextBlock x:Name="ProfileBadge" Style="{DynamicResource Text.Muted}"/></Border>
+                            <Border Style="{DynamicResource Badge}"><TextBlock x:Name="AdminBadge" Style="{DynamicResource Text.Muted}"/></Border>
+                            <Border Style="{DynamicResource Badge}"><TextBlock x:Name="ManagedBadge" Style="{DynamicResource Text.Muted}"/></Border>
+                        </WrapPanel>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="ElevateButton" Style="{DynamicResource Button.Secondary}" Content="{DynamicResource str.elevate.button}" ToolTip="{DynamicResource str.elevate.tooltip}" Visibility="Collapsed" Margin="0,0,8,0"/>
+                        <Button x:Name="RefreshButton" Style="{DynamicResource Button.Primary}" Content="{DynamicResource str.common.refresh}" Margin="0,0,8,0"/>
                         <Button x:Name="CancelButton" Style="{DynamicResource Button.Secondary}" Content="{DynamicResource str.common.cancel}" IsEnabled="False" Margin="0"/>
                     </StackPanel>
-                    <TextBlock x:Name="PageTitle" Style="{DynamicResource Text.H1}" VerticalAlignment="Center"/>
-                </DockPanel>
+                </Grid>
             </Border>
 
             <!-- Page host -->
