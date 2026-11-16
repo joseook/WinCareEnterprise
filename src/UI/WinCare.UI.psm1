@@ -18,8 +18,12 @@ $script:PageDefs = [ordered]@{
     diagnostics = @{ Xaml = 'Diagnostics.xaml' }
     quick       = @{ Xaml = 'Actions.xaml'; Actions = $true }
     advanced    = @{ Xaml = 'Actions.xaml'; Actions = $true }
+    processes   = @{ Xaml = 'Actions.xaml'; Actions = $true; DataFunction = 'Get-WcProcessesPageData' }
     storage     = @{ Xaml = 'Storage.xaml' }
     startup     = @{ Xaml = 'Startup.xaml' }
+    health      = @{ Xaml = 'Actions.xaml'; Actions = $true; DataFunction = 'Get-WcHealthPageData' }
+    apps        = @{ Xaml = 'Actions.xaml'; Actions = $true; DataFunction = 'Get-WcAppsPageData' }
+    network     = @{ Xaml = 'Actions.xaml'; Actions = $true; DataFunction = 'Get-WcNetworkPageData' }
     office      = @{ Xaml = 'Actions.xaml'; Actions = $true }
     integrity   = @{ Xaml = 'Actions.xaml'; Actions = $true }
     security    = @{ Xaml = 'Security.xaml' }
@@ -403,10 +407,97 @@ function Get-WcPageActions {
     return @($script:Ui.Catalog | Where-Object { $_.ContainsKey('Pages') -and (@($_.Pages) -contains $PageId) })
 }
 
+function Show-WcAnalysis {
+    <# Renders Get-Wc<Area>PageData output: one titled grid per section. #>
+    param([string] $PageId, $Data, [string] $ErrorText)
+    $p = $script:Ui.Pages[$PageId]; if (-not $p) { return }
+    $host0 = $p.FindName('SectionsHost')
+    $host0.Children.Clear()
+    $script:Ui.AnalysisGrids[$PageId] = @{}
+    $errors = @()
+    if ($ErrorText) { $errors += $ErrorText }
+    if ($Data) {
+        foreach ($sec in @($Data.Sections)) {
+            if ($null -eq $sec) { continue }
+            $t = New-Object System.Windows.Controls.TextBlock
+            $t.Text = Get-WcString ([string]$sec.TitleKey)
+            $t.SetResourceReference([System.Windows.FrameworkElement]::StyleProperty, 'Text.H2')
+            $sevProp = $sec.PSObject.Properties['Severity']
+            if ($sevProp -and @('Warning', 'Critical') -contains [string]$sevProp.Value) { $t.SetResourceReference([System.Windows.Controls.TextBlock]::ForegroundProperty, ('Brush.' + $sevProp.Value)) }
+            [void]$host0.Children.Add($t)
+            $noteProp = $sec.PSObject.Properties['NoteKey']
+            if ($noteProp -and $noteProp.Value) {
+                $n = New-Object System.Windows.Controls.TextBlock
+                $n.Text = Get-WcString ([string]$noteProp.Value); $n.TextWrapping = 'Wrap'; $n.Margin = '0,0,0,6'
+                $n.SetResourceReference([System.Windows.FrameworkElement]::StyleProperty, 'Text.Muted')
+                [void]$host0.Children.Add($n)
+            }
+            $g = New-Object System.Windows.Controls.DataGrid
+            $g.SetResourceReference([System.Windows.FrameworkElement]::StyleProperty, 'Grid.Data')
+            $g.MaxHeight = 360; $g.Margin = '0,0,0,14'; $g.Tag = [string]$sec.Id
+            Register-WcGrid -Grid $g
+            [void]$host0.Children.Add($g)
+            Set-WcGridRows -Grid $g -Rows @($sec.Rows)
+            $script:Ui.AnalysisGrids[$PageId][[string]$sec.Id] = $g
+        }
+        foreach ($e in @($Data.Errors)) { if ($e) { $errors += [string]$e } }
+    }
+    $eb = $p.FindName('AnalysisErrors')
+    if ($errors.Count -gt 0) { $eb.Text = (Get-WcString 'analysis.errors') + ' ' + ($errors -join ' | '); $eb.Visibility = 'Visible' } else { $eb.Visibility = 'Collapsed' }
+    $p.FindName('AnalysisStatus').Text = Get-WcString 'analysis.done' -Arguments @((Get-Date).ToString('t'))
+}
+
+function Start-WcPageAnalysis {
+    <# Runs the page's data function (a fixed name from $script:PageDefs) in the background. #>
+    param([string] $PageId)
+    $def = $script:PageDefs[$PageId]
+    if (-not $def -or -not $def.ContainsKey('DataFunction')) { return }
+    $p = $script:Ui.Pages[$PageId]
+    if ($p) { $p.FindName('AnalysisStatus').Text = Get-WcString 'analysis.running' }
+    $script:Ui.AnalysisStarted[$PageId] = $true
+    $jobArgs = @{ Fn = [string]$def.DataFunction; PageId = $PageId }
+    if ($script:Ui.Headless) {
+        # Snapshot/CI: synchronous, so the rendered page shows real data.
+        $data = $null; $err = $null
+        $cmd = Get-Command -Name $jobArgs.Fn -CommandType Function -ErrorAction SilentlyContinue
+        if ($cmd) { try { $data = & $cmd } catch { $err = $_.Exception.Message } } else { $err = Get-WcString 'analysis.unavailable' }
+        Show-WcAnalysis -PageId $PageId -Data $data -ErrorText $err
+        return
+    }
+    Start-WcUiJob -Name ('analysis-' + $PageId) -Arguments $jobArgs -Script {
+        param($a)
+        $cmd = Get-Command -Name $a.Fn -CommandType Function -ErrorAction SilentlyContinue
+        if (-not $cmd) { return [pscustomobject]@{ PageId = $a.PageId; Data = $null; Missing = $true } }
+        [pscustomobject]@{ PageId = $a.PageId; Data = (& $cmd); Missing = $false }
+    } -OnComplete {
+        param($result, $err)
+        if ($err) { Write-WcLog -Level Error -Category 'Analysis' -Message $err | Out-Null }
+        if ($result) {
+            $e2 = $err
+            if ($result.Missing) { $e2 = Get-WcString 'analysis.unavailable' }
+            Show-WcAnalysis -PageId $result.PageId -Data $result.Data -ErrorText $e2
+        }
+    }
+}
+
+function Get-WcSelectedAnalysisRow {
+    <# Selected row of a section grid on an analysis page, or $null. #>
+    param([string] $PageId, [string] $SectionId)
+    if (-not $script:Ui.AnalysisGrids.ContainsKey($PageId)) { return $null }
+    $g = $script:Ui.AnalysisGrids[$PageId][$SectionId]
+    if ($g) { return $g.SelectedItem }
+    return $null
+}
+
 function Update-WcActionsPage {
     param([string] $PageId)
     $p = $script:Ui.Pages[$PageId]; if (-not $p) { return }
     $p.FindName('ActionsIntro').Text = Get-WcString ("actions.intro.$PageId")
+    $def = $script:PageDefs[$PageId]
+    if ($def.ContainsKey('DataFunction')) {
+        $p.FindName('AnalysisPanel').Visibility = 'Visible'
+        if (-not $script:Ui.AnalysisStarted.ContainsKey($PageId) -and $script:Ui.CurrentPage -eq $PageId) { Start-WcPageAnalysis -PageId $PageId }
+    }
     $prof = Get-WcProfile $script:Ui.Settings.Profile
     if ($prof.AllowModify) { $p.FindName('ActionsProfileHint').Visibility = 'Collapsed' }
     else {
@@ -691,6 +782,8 @@ function Get-WcPage {
     if ($def.Actions) {
         $page.FindName('PreviewButton').Tag = $PageId
         $page.FindName('RunButton').Tag = $PageId
+        $page.FindName('AnalyzeButton').Tag = $PageId
+        $page.FindName('AnalyzeButton').Add_Click({ param($sender, $e) Invoke-WcUiSafe { Start-WcPageAnalysis -PageId ([string]$sender.Tag) } })
         $page.FindName('PreviewButton').Add_Click({ param($sender, $e) Invoke-WcUiSafe { Start-WcActionRun -PageId ([string]$sender.Tag) -DryRun } })
         $page.FindName('RunButton').Add_Click({ param($sender, $e) Invoke-WcUiSafe { Start-WcActionRun -PageId ([string]$sender.Tag) } })
     }
@@ -756,6 +849,8 @@ function Initialize-WcUi {
         AutoDiagnostic = $AutoDiagnostic
         Catalog      = $null
         Headless     = $false
+        AnalysisGrids   = @{}
+        AnalysisStarted = @{}
         Errors       = New-Object System.Collections.ArrayList
     }
     $script:Ui.Catalog = Import-WcActionCatalog -Path $script:Ui.CatalogPath

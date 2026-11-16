@@ -1,0 +1,16 @@
+{
+  "nav.processes": "Processos e memória",
+  "nav.health": "Saúde do sistema",
+  "nav.apps": "Aplicativos e reparos",
+  "nav.network": "Rede",
+  "actions.intro.processes": "Uso de memória e CPU por processo, programas em segundo plano e sinais de vazamento. Somente leitura; encerrar um processo pede confirmação.",
+  "actions.intro.health": "Eventos críticos recentes, dispositivos com problema, saúde dos discos, tarefas e serviços de inicialização, bateria e Windows Update. Somente leitura.",
+  "actions.intro.apps": "Programas instalados, atualizações disponíveis (winget) e aplicativos da Store com problema. Atualizar ou redefinir só o que você selecionar.",
+  "actions.intro.network": "Adaptadores, conectividade, DNS e proxy. Os reparos de rede pedem confirmação e respeitam VPN e políticas da organização.",
+  "analysis.run": "Analisar agora",
+  "analysis.running": "Analisando…",
+  "analysis.done": "Análise concluída às {0}.",
+  "analysis.errors": "Partes que não puderam ser lidas:",
+  "analysis.unavailable": "Análise indisponível nesta versão.",
+  "analysis.actions": "Ações"
+}

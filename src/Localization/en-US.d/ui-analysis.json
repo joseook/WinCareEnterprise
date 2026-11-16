@@ -1,0 +1,16 @@
+{
+  "nav.processes": "Processes and memory",
+  "nav.health": "System health",
+  "nav.apps": "Apps and repairs",
+  "nav.network": "Network",
+  "actions.intro.processes": "Memory and CPU per process, background programs and leak signals. Read-only; ending a process asks for confirmation.",
+  "actions.intro.health": "Recent critical events, devices with problems, disk health, startup tasks and services, battery and Windows Update. Read-only.",
+  "actions.intro.apps": "Installed programs, available updates (winget) and Store apps with problems. Only what you select is updated or reset.",
+  "actions.intro.network": "Adapters, connectivity, DNS and proxy. Network repairs ask for confirmation and respect VPN and organization policies.",
+  "analysis.run": "Analyze now",
+  "analysis.running": "Analyzing…",
+  "analysis.done": "Analysis finished at {0}.",
+  "analysis.errors": "Parts that could not be read:",
+  "analysis.unavailable": "Analysis not available in this version.",
+  "analysis.actions": "Actions"
+}

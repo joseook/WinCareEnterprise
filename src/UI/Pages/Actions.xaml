@@ -1,6 +1,16 @@
 <ScrollViewer xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" VerticalScrollBarVisibility="Auto" Focusable="False">
     <StackPanel Margin="24,20,24,24">
         <TextBlock x:Name="ActionsIntro" Style="{DynamicResource Text.Muted}" Margin="0,0,0,12"/>
+        <!-- Analysis pages (processes, health, apps, network): read-only sections filled by Get-Wc<Area>PageData. -->
+        <StackPanel x:Name="AnalysisPanel" Visibility="Collapsed" Margin="0,0,0,8">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <Button x:Name="AnalyzeButton" Style="{DynamicResource Button.Primary}" Content="{DynamicResource str.analysis.run}"/>
+                <TextBlock x:Name="AnalysisStatus" Style="{DynamicResource Text.Muted}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+            </StackPanel>
+            <StackPanel x:Name="SectionsHost"/>
+            <TextBlock x:Name="AnalysisErrors" Style="{DynamicResource Text.Muted}" Foreground="{DynamicResource Brush.Warning}" TextWrapping="Wrap" Visibility="Collapsed" Margin="0,4,0,8"/>
+            <TextBlock Text="{DynamicResource str.analysis.actions}" Style="{DynamicResource Text.H2}" Margin="0,8,0,4"/>
+        </StackPanel>
         <TextBlock x:Name="ActionsProfileHint" Style="{DynamicResource Text.Muted}" Margin="0,0,0,12" Foreground="{DynamicResource Brush.Warning}"/>
         <TextBlock x:Name="ActionsEmptyText" Text="{DynamicResource str.actions.empty}" Style="{DynamicResource Text.Muted}"/>
         <StackPanel x:Name="ActionsList"/>
