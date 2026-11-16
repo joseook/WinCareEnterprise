@@ -67,8 +67,8 @@ $installHash = (Get-FileHash -LiteralPath $install -Algorithm SHA256).Hash
 # Self-test: the generated install.ps1 must accept this exact package.
 $tmpCache = Join-Path ([System.IO.Path]::GetTempPath()) ('wincare-selftest-' + [guid]::NewGuid().ToString('N'))
 try {
-    . $install
-    $null = Invoke-WcbMain -Version $version -PackagePath $zip -ManifestPath $manPath -CacheRoot $tmpCache -VerifyOnly
+    # Child scope: dot-sourcing install.ps1 defines $Version, which would clobber $version here.
+    $null = & { param($i, $v, $z, $m, $c) . $i; Invoke-WcbMain -Version $v -PackagePath $z -ManifestPath $m -CacheRoot $c -VerifyOnly } $install $version $zip $manPath $tmpCache
 }
 finally { Remove-Item -LiteralPath $tmpCache -Recurse -Force -ErrorAction SilentlyContinue }
 
