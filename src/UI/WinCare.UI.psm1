@@ -325,8 +325,10 @@ function Update-WcStoragePage {
     $p = $script:Ui.Pages['storage']; if (-not $p) { return }
     $s = $script:Ui.Snapshot; if (-not $s) { return }
     $rows = foreach ($v in @($s.Storage | Where-Object { $_ })) {
-        [pscustomobject]@{ Drive = $v.Drive; Label = $v.Label; FileSystem = $v.FileSystem; Size = (Format-WcBytes $v.SizeBytes); Free = (Format-WcBytes $v.FreeBytes)
-            FreePercent = (Format-WcPercent $v.FreePercent); MediaType = $v.MediaType; BusType = $v.BusType; Model = $v.Model; IsSystem = $v.IsSystem }
+        $lvl = 'Ok'
+        if ($null -ne $v.FreePercent) { if ([double]$v.FreePercent -lt 10) { $lvl = 'Critical' } elseif ([double]$v.FreePercent -lt 20) { $lvl = 'Warning' } }
+        [pscustomobject]@{ Drive = $v.Drive; Label = $v.Label; FileSystem = $v.FileSystem; Size = (Format-WcBytes $v.SizeBytes); SizeRaw = [double]$v.SizeBytes; Free = (Format-WcBytes $v.FreeBytes); FreeRaw = [double]$v.FreeBytes
+            FreePercent = (Format-WcPercent $v.FreePercent); FreePercentRaw = [double]$v.FreePercent; FreePercentLevel = $lvl; MediaType = $v.MediaType; BusType = $v.BusType; Model = $v.Model; IsSystem = $v.IsSystem }
     }
     Set-WcGridRows -Grid $p.FindName('StorageGrid') -Rows @($rows)
 }
@@ -335,7 +337,7 @@ function Update-WcStartupPage {
     $p = $script:Ui.Pages['startup']; if (-not $p) { return }
     $s = $script:Ui.Snapshot; if (-not $s) { return }
     $procs = foreach ($x in @($s.Processes | Where-Object { $_ })) {
-        [pscustomobject]@{ Name = $x.Name; Id = $x.Id; Memory = (Format-WcBytes $x.WorkingSetBytes); CpuSecondsTotal = $x.CpuSecondsTotal; Company = $x.Company }
+        [pscustomobject]@{ Name = $x.Name; Id = $x.Id; Memory = (Format-WcBytes $x.WorkingSetBytes); MemoryRaw = [double]$x.WorkingSetBytes; CpuSecondsTotal = $x.CpuSecondsTotal; Company = $x.Company }
     }
     Set-WcGridRows -Grid $p.FindName('ProcessGrid') -Rows @($procs)
     Set-WcGridRows -Grid $p.FindName('StartupGrid') -Rows @($s.Startup)
@@ -355,10 +357,11 @@ function Update-WcSecurityPage {
     $pr = $s.Security.Protection
     $unknown = Get-WcString 'common.unknown'
     $fmt = { param($v) if ($null -eq $v) { $unknown } else { [string]$v } }
+    $lvl = { param($v) if ($null -eq $v) { 'Info' } elseif ([string]$v -match '^(True|Running|On|Enabled)$') { 'Ok' } else { 'Critical' } }
     $prot = @(
-        [pscustomobject]@{ Protection = 'Microsoft Defender (service)'; State = (& $fmt $pr.DefenderService) }
-        [pscustomobject]@{ Protection = 'Microsoft Defender (real-time)'; State = (& $fmt $pr.DefenderRealTime) }
-        [pscustomobject]@{ Protection = 'Windows Firewall (all profiles)'; State = (& $fmt $pr.FirewallAllProfiles) }
+        [pscustomobject]@{ Protection = 'Microsoft Defender (service)'; State = (& $fmt $pr.DefenderService); StateLevel = (& $lvl $pr.DefenderService) }
+        [pscustomobject]@{ Protection = 'Microsoft Defender (real-time)'; State = (& $fmt $pr.DefenderRealTime); StateLevel = (& $lvl $pr.DefenderRealTime) }
+        [pscustomobject]@{ Protection = 'Windows Firewall (all profiles)'; State = (& $fmt $pr.FirewallAllProfiles); StateLevel = (& $lvl $pr.FirewallAllProfiles) }
     )
     Set-WcGridRows -Grid $p.FindName('ProtectionGrid') -Rows $prot
 }
@@ -381,7 +384,7 @@ function Update-WcReportsPage {
     $hist = @(foreach ($h in @(Read-WcHistory -Directory (Join-Path (Get-WcDataRoot) 'history') -Last 200)) {
         if ($null -eq $h) { continue }
         $freed = ''; $bf = $h.PSObject.Properties['bytesFreed']; if ($bf -and $null -ne $bf.Value) { $freed = Format-WcBytes $bf.Value }
-        [pscustomobject]@{ Modified = ([datetime]$h.time).ToLocalTime().ToString('g'); Action = (Get-WcString ('action.' + $h.action)); Mode = $h.mode; Status = $h.status; Summary = $h.summary; Freed = $freed; FreeDelta = $(if ($null -ne (Get-WcOptionalValue $h 'freeBytesDelta')) { Format-WcBytesDelta $h.freeBytesDelta } else { '' }); RestorePoint = (Get-WcRestorePointText (Get-WcOptionalValue $h 'restorePoint')) }
+        [pscustomobject]@{ Modified = ([datetime]$h.time).ToLocalTime().ToString('g'); Action = (Get-WcString ('action.' + $h.action)); Mode = $h.mode; Status = $h.status; StatusLevel = (Get-WcStatusLevel $h.status); Summary = $h.summary; Freed = $freed; FreeDelta = $(if ($null -ne (Get-WcOptionalValue $h 'freeBytesDelta')) { Format-WcBytesDelta $h.freeBytesDelta } else { '' }); RestorePoint = (Get-WcRestorePointText (Get-WcOptionalValue $h 'restorePoint')) }
     })
     if ($hist.Count -gt 1) { [array]::Reverse($hist) }
     Set-WcGridRows -Grid $p.FindName('ActionsHistoryGrid') -Rows @($hist)
@@ -502,7 +505,7 @@ function Show-WcActionResults {
         $freeDelta = ''; $cmp = Get-WcOptionalValue $r 'Comparison'
         $fd = Get-WcOptionalValue $cmp 'FreeBytesDelta'
         if ($null -ne $fd) { $freeDelta = Format-WcBytesDelta $fd }
-        $rows += [pscustomobject]@{ Action = (Get-WcString ('action.' + $r.ActionId)); Mode = $r.Mode; Status = $r.Status; Summary = $summary; Freed = $freed; FreeDelta = $freeDelta; RestorePoint = (Get-WcRestorePointText (Get-WcOptionalValue $r 'RestorePoint')) }
+        $rows += [pscustomobject]@{ Action = (Get-WcString ('action.' + $r.ActionId)); Mode = $r.Mode; Status = $r.Status; StatusLevel = (Get-WcStatusLevel $r.Status); Summary = $summary; Freed = $freed; FreeDelta = $freeDelta; RestorePoint = (Get-WcRestorePointText (Get-WcOptionalValue $r 'RestorePoint')) }
     }
     Set-WcGridRows -Grid $p.FindName('ResultGrid') -Rows $rows
     Set-WcGridRows -Grid $p.FindName('DetailGrid') -Rows @($details | Select-Object -First 500)
@@ -604,6 +607,69 @@ function Register-WcSettingsEvents {
 
 # -------------------------------------------------------------- navigation --
 
+# Column conventions for every data grid (rows come from collectors as PSCustomObjects):
+#   <Col>Raw   hidden; numeric/sortable value for <Col> (sizes, counts, dates)
+#   <Col>Level hidden; Ok|Info|Warning|Critical colours <Col>
+#   names in $script:WcNumberColumns are right-aligned.
+$script:WcNumberColumns = '^(CpuSecondsTotal|Memory|Size|Freed|FreeDelta|Count|Pid|ProcessId|Percent|Before|After|Delta|Duration|ExitCode|Events|Occurrences|WorkingSet|PrivateBytes|Cpu|CpuPercent|Growth|Wear|Capacity|Latency|SizeBytes|.*Bytes|.*MB|.*Percent|.*Count)$'
+
+function Get-WcStatusLevel {
+    <# Action status -> colour level for result/history grids. #>
+    param([string] $Status)
+    switch -Regex ($Status) {
+        '^(Succeeded)$' { return 'Ok' }
+        '^(Failed)$' { return 'Critical' }
+        '^(Blocked|Skipped)$' { return 'Warning' }
+        default { return 'Info' }
+    }
+}
+
+function Get-WcGridSample {
+    param($Grid)
+    foreach ($i in @($Grid.ItemsSource)) { if ($null -ne $i) { return $i } }
+    return $null
+}
+
+function New-WcLevelCellStyle {
+    <# Cell style colouring the text by the hidden <Prop>Level value (theme-aware brushes). #>
+    param([string] $LevelProperty)
+    $base = $script:Ui.Window.TryFindResource('Grid.Cell')
+    $style = New-Object System.Windows.Style([System.Windows.Controls.DataGridCell], $base)
+    foreach ($lv in 'Ok', 'Info', 'Warning', 'Critical') {
+        $dt = New-Object System.Windows.DataTrigger
+        $dt.Binding = New-Object System.Windows.Data.Binding($LevelProperty)
+        $dt.Value = $lv
+        $dt.Setters.Add((New-Object System.Windows.Setter([System.Windows.Controls.Control]::ForegroundProperty, (New-Object System.Windows.DynamicResourceExtension(('Brush.' + $lv))))))
+        if ($lv -eq 'Critical' -or $lv -eq 'Warning') { $dt.Setters.Add((New-Object System.Windows.Setter([System.Windows.Controls.Control]::FontWeightProperty, [System.Windows.FontWeights]::SemiBold))) }
+        $style.Triggers.Add($dt)
+    }
+    return $style
+}
+
+function Set-WcGridColumn {
+    param($Grid, $EventArgs)
+    $name = [string]$EventArgs.PropertyName
+    if ($name -match '(Raw|Level)$' -and $name.Length -gt 5) { $EventArgs.Cancel = $true; return }
+    $col = $EventArgs.Column
+    $col.Header = Get-WcString ('col.' + $name)
+    $sample = Get-WcGridSample $Grid
+    if ($sample) {
+        if ($sample.PSObject.Properties[$name + 'Raw']) { $col.SortMemberPath = $name + 'Raw' }
+        if ($sample.PSObject.Properties[$name + 'Level']) { $col.CellStyle = New-WcLevelCellStyle -LevelProperty ($name + 'Level') }
+    }
+    if ($col -is [System.Windows.Controls.DataGridTextColumn]) {
+        $key = 'Grid.CellText'
+        if ($name -match $script:WcNumberColumns) { $key = 'Grid.CellNumber' }
+        $st = $script:Ui.Window.TryFindResource($key)
+        if ($st) { $col.ElementStyle = $st }
+    }
+}
+
+function Register-WcGrid {
+    param($Grid)
+    $Grid.Add_AutoGeneratingColumn({ param($sender, $e) Set-WcGridColumn -Grid $sender -EventArgs $e })
+}
+
 function Get-WcPage {
     param([string] $PageId)
     if ($script:Ui.Pages.ContainsKey($PageId)) { return $script:Ui.Pages[$PageId] }
@@ -631,7 +697,7 @@ function Get-WcPage {
     # Localised column headers for every auto-generated DataGrid on the page.
     foreach ($gridName in @('SystemGrid', 'ErrorsGrid', 'StorageGrid', 'ProcessGrid', 'StartupGrid', 'ManagementGrid', 'ProtectionGrid', 'HistoryGrid', 'ResultGrid', 'DetailGrid', 'ActionsHistoryGrid')) {
         $g = $page.FindName($gridName)
-        if ($g) { $g.Add_AutoGeneratingColumn({ param($sender, $e) $e.Column.Header = Get-WcString ('col.' + $e.PropertyName) }) }
+        if ($g) { Register-WcGrid -Grid $g }
     }
     return $page
 }

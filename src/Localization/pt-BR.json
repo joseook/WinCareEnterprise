@@ -202,5 +202,6 @@
   "col.Detail": "Detalhe",
   "col.MatchedBy": "Critério",
   "col.Path": "Caminho",
-  "col.Reason": "Motivo"
+  "col.Reason": "Motivo",
+  "common.empty": "Nenhum item."
 }

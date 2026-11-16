@@ -202,5 +202,6 @@
   "col.Detail": "Detail",
   "col.MatchedBy": "Matched by",
   "col.Path": "Path",
-  "col.Reason": "Reason"
+  "col.Reason": "Reason",
+  "common.empty": "No items."
 }

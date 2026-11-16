@@ -9,6 +9,8 @@
     <SolidColorBrush x:Key="Brush.Muted" Color="#A3ACBB"/>
     <SolidColorBrush x:Key="Brush.Accent" Color="#2F6FDB"/>
     <SolidColorBrush x:Key="Brush.OnAccent" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.RowHover" Color="#232937"/>
+    <SolidColorBrush x:Key="Brush.RowSelected" Color="#22385E"/>
     <SolidColorBrush x:Key="Brush.Critical" Color="#FF6B6F"/>
     <SolidColorBrush x:Key="Brush.Warning" Color="#E8B04B"/>
     <SolidColorBrush x:Key="Brush.Info" Color="#7AB2FF"/>
