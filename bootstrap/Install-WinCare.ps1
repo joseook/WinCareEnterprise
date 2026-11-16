@@ -36,6 +36,9 @@
     SHA-256 of the zip obtained out of band.
 .PARAMETER VerifyOnly
     Verify and cache, but do not start the interface.
+.PARAMETER PowerShellHost
+    Auto (default): PowerShell 7 if installed in Program Files, else Windows PowerShell 5.1.
+    WindowsPowerShell or PowerShell7 force one host.
 .PARAMETER Elevate
     Ask for administrator rights (UAC) and run from Program Files. Needed to apply
     maintenance actions that require admin. Online mode only.
@@ -48,7 +51,8 @@ param(
     [string] $ExpectedSha256,
     [string] $CacheRoot,
     [switch] $VerifyOnly,
-    [switch] $Elevate
+    [switch] $Elevate,
+    [ValidateSet('Auto', 'WindowsPowerShell', 'PowerShell7')][string] $PowerShellHost = 'Auto'
 )
 
 Set-StrictMode -Version 2.0
@@ -270,6 +274,39 @@ function Get-WcbDownload {
     Invoke-WebRequest -Uri $Uri -OutFile $OutFile -UseBasicParsing -ErrorAction Stop
 }
 
+function Get-WcbHostCandidates {
+    <#
+        Hosts that may run the app. PowerShell 7 is used only from its default machine-wide
+        location (Program Files: admin-only write), never from PATH or a user folder.
+    #>
+    $sysRoot = $env:SystemRoot
+    if (-not $sysRoot) { $sysRoot = 'C:\Windows' }
+    $pf = $env:ProgramFiles
+    if (-not $pf) { $pf = 'C:\Program Files' }
+    $ps7 = $pf.TrimEnd('\') + '\PowerShell\7\pwsh.exe'
+    return [pscustomobject]@{
+        WindowsPowerShell = $sysRoot.TrimEnd('\') + '\System32\WindowsPowerShell\v1.0\powershell.exe'
+        PowerShell7       = $ps7
+        HasPowerShell7    = [bool](Test-Path -LiteralPath $ps7)
+    }
+}
+
+function Select-WcbAppHost {
+    <# Pure: Auto = PowerShell 7 when installed, else Windows PowerShell 5.1 (always present). #>
+    param([string] $Preference = 'Auto', [Parameter(Mandatory = $true)] $Candidates)
+    switch ($Preference) {
+        'WindowsPowerShell' { return $Candidates.WindowsPowerShell }
+        'PowerShell7' {
+            if (-not $Candidates.HasPowerShell7) { throw ('PowerShell 7 not found at {0}.' -f $Candidates.PowerShell7) }
+            return $Candidates.PowerShell7
+        }
+        default {
+            if ($Candidates.HasPowerShell7) { return $Candidates.PowerShell7 }
+            return $Candidates.WindowsPowerShell
+        }
+    }
+}
+
 function Get-WcbEnvironmentBlock {
     <#
         Returns $null when the app can start here, or a message explaining which
@@ -360,7 +397,8 @@ function Start-WcbElevated {
 function Invoke-WcbMain {
     param(
         [string] $Version, [string] $PackagePath, [string] $ManifestPath, [string] $ExpectedSha256,
-        [string] $CacheRoot, [switch] $VerifyOnly, [switch] $Elevate, [string] $SelfPath
+        [string] $CacheRoot, [switch] $VerifyOnly, [switch] $Elevate, [string] $SelfPath,
+        [ValidateSet('Auto', 'WindowsPowerShell', 'PowerShell7')][string] $PowerShellHost = 'Auto'
     )
     if (-not $Version) { $Version = $script:WcbDefaultVersion }
     if (-not (Test-WcbVersion $Version)) { throw 'Use -Version x.y.z (explicit version is required).' }
@@ -428,19 +466,18 @@ function Invoke-WcbMain {
     }
     Write-Host "WinCare $Version verified: $target"
     if ($VerifyOnly) { return $target }
-    $sysRoot = $env:SystemRoot
-    if (-not $sysRoot) { $sysRoot = 'C:\Windows' }
-    $ps51 = $sysRoot.TrimEnd('\') + '\System32\WindowsPowerShell\v1.0\powershell.exe'
+    $appHost = Select-WcbAppHost -Preference $PowerShellHost -Candidates (Get-WcbHostCandidates)
+    Write-Host ("Starting with {0}" -f $appHost)
     # Process-scope RemoteSigned: lets the verified local copy run on machines left at
     # the default 'Restricted'. Group Policy (MachinePolicy/UserPolicy) still wins.
-    Start-Process -FilePath $ps51 -ArgumentList @('-NoProfile', '-STA', '-ExecutionPolicy', 'RemoteSigned', '-File', ('"{0}"' -f (Join-Path $target 'src\Start-WinCare.ps1')))
+    Start-Process -FilePath $appHost -ArgumentList @('-NoProfile', '-STA', '-ExecutionPolicy', 'RemoteSigned', '-File', ('"{0}"' -f (Join-Path $target 'src\Start-WinCare.ps1')))
     return $target
 }
 
 # Dot-sourcing (tests) only loads the functions.
 if ($MyInvocation.InvocationName -ne '.') {
     try {
-        Invoke-WcbMain -Version $Version -PackagePath $PackagePath -ManifestPath $ManifestPath -ExpectedSha256 $ExpectedSha256 -CacheRoot $CacheRoot -VerifyOnly:$VerifyOnly -Elevate:$Elevate -SelfPath $PSCommandPath | Out-Null
+        Invoke-WcbMain -Version $Version -PackagePath $PackagePath -ManifestPath $ManifestPath -ExpectedSha256 $ExpectedSha256 -CacheRoot $CacheRoot -VerifyOnly:$VerifyOnly -Elevate:$Elevate -SelfPath $PSCommandPath -PowerShellHost $PowerShellHost | Out-Null
     }
     catch {
         Write-Error ('WinCare bootstrap stopped: ' + $_.Exception.Message)

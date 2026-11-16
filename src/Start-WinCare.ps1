@@ -5,8 +5,8 @@
 
 .DESCRIPTION
     Opening WinCare never changes the system. The GUI requires Windows with WPF and
-    an STA thread; if the current host is not STA (e.g. pwsh), the script relaunches
-    itself in Windows PowerShell 5.1 with -STA. It never changes the execution policy.
+    an STA thread; if the current host is not STA, the script relaunches itself in
+    the same host (Windows PowerShell 5.1 or PowerShell 7) with -STA. It never changes the execution policy.
 
 .PARAMETER NoGui
     Runs the diagnostic without the interface, prints a summary and (optionally)
@@ -80,13 +80,14 @@ if ($NoGui) {
 if (-not (Test-WcIsWindows)) { throw 'The WinCare interface requires Windows (WPF). Use -NoGui elsewhere.' }
 
 if ([System.Threading.Thread]::CurrentThread.GetApartmentState() -ne [System.Threading.ApartmentState]::STA) {
-    # WPF needs STA. Relaunch in Windows PowerShell 5.1 (the supported host) without
-    # touching the execution policy.
-    $ps51 = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    # WPF needs STA. Relaunch in the same host (powershell.exe or pwsh.exe) with -STA,
+    # without touching the execution policy.
+    $ps51 = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+    if ($ps51 -notmatch '(?i)\\(powershell|pwsh)\.exe$') { $ps51 = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe' }
     $argList = @('-NoProfile', '-STA', '-File', ('"{0}"' -f $PSCommandPath))
     if ($Language) { $argList += @('-Language', $Language) }
     if ($NoAutoDiagnostic) { $argList += '-NoAutoDiagnostic' }
-    Write-WcLog -Category 'Startup' -Message 'Host is not STA; relaunching in Windows PowerShell 5.1 -STA.' | Out-Null
+    Write-WcLog -Category 'Startup' -Message ('Host is not STA; relaunching {0} -STA.' -f $ps51) | Out-Null
     Start-Process -FilePath $ps51 -ArgumentList $argList | Out-Null
     return
 }

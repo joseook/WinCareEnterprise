@@ -141,7 +141,9 @@ function ConvertTo-WcRestorePointAvailability {
     if ($Facts.ContainsKey('ProtectedVolumes') -and $Facts['IsWindows']) { $protected = (Test-WcVolumeProtected -ProtectedVolume @($Facts.ProtectedVolumes) -Drive $drive) }
     $reason = ''
     if (-not $Facts['IsWindows']) { $reason = 'not-windows' }
-    elseif ([string]$Facts['PSEdition'] -ne 'Desktop') { $reason = 'powershell-edition' }
+    # PowerShell 7 (Core): the restore point cmdlets exist only in Windows PowerShell 5.1,
+    # so they run in a powershell.exe child (DesktopBridge) when it is present.
+    elseif ([string]$Facts['PSEdition'] -ne 'Desktop' -and -not $Facts['DesktopBridge']) { $reason = 'powershell-edition' }
     elseif (-not $Facts['HasCheckpointCommand']) { $reason = 'cmdlet-missing' }
     elseif ($null -ne $Facts['ProductType'] -and [int]$Facts['ProductType'] -ne 1) { $reason = 'server-sku' }
     elseif ($null -ne $Facts['PolicyDisableSR'] -and [int]$Facts['PolicyDisableSR'] -eq 1) { $reason = 'disabled-by-policy' }
@@ -154,12 +156,19 @@ function Get-WcRestorePointFacts {
     <# Read-only I/O: everything ConvertTo-WcRestorePointAvailability needs. Never writes anything. #>
     [CmdletBinding()]
     param()
-    $facts = @{ IsWindows = (Test-WcIsWindows); PSEdition = [string]$PSVersionTable['PSEdition']; HasCheckpointCommand = $false
+    $facts = @{ IsWindows = (Test-WcIsWindows); PSEdition = [string]$PSVersionTable['PSEdition']; HasCheckpointCommand = $false; DesktopBridge = $false
         IsAdmin = $false; ProductType = $null; PolicyDisableSR = $null; ProtectedVolumes = $null; FrequencyMinutes = $null; SystemDrive = $env:SystemDrive
     }
     if (-not $facts.IsWindows) { return $facts }
     if (-not $facts.SystemDrive) { $facts.SystemDrive = 'C:' }
-    $facts.HasCheckpointCommand = [bool](Get-Command -Name 'Checkpoint-Computer' -CommandType Cmdlet -ErrorAction SilentlyContinue)
+    if ($facts.PSEdition -eq 'Desktop') {
+        $facts.HasCheckpointCommand = [bool](Get-Command -Name 'Checkpoint-Computer' -CommandType Cmdlet -ErrorAction SilentlyContinue)
+    }
+    else {
+        # Windows PowerShell 5.1 ships with every supported Windows; its cmdlet is used through the bridge.
+        $facts.DesktopBridge = [bool](Test-Path -LiteralPath (Get-WcDesktopPowerShellPath))
+        $facts.HasCheckpointCommand = $facts.DesktopBridge
+    }
     $facts.IsAdmin = (Test-WcIsAdmin)
     $os = @(Get-WcCimData -ClassName 'Win32_OperatingSystem') | Select-Object -First 1
     if ($os) { $facts.ProductType = Get-WcObjectValue $os 'ProductType' }
@@ -176,11 +185,36 @@ function Get-WcRestorePointAvailability {
     return (ConvertTo-WcRestorePointAvailability -Facts (Get-WcRestorePointFacts))
 }
 
+function Get-WcDesktopPowerShellPath {
+    $root = $env:SystemRoot
+    if (-not $root) { $root = 'C:\Windows' }
+    return ($root.TrimEnd('\') + '\System32\WindowsPowerShell\v1.0\powershell.exe')
+}
+
+function Invoke-WcDesktopPowerShell {
+    <#
+        Runs a FIXED script (built here from validated values only) in Windows PowerShell 5.1
+        and returns its JSON output parsed. Used from PowerShell 7 for 5.1-only cmdlets.
+        -EncodedCommand is a command, not a script file: execution policy is not involved.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory = $true)][string] $Script)
+    $b64 = [System.Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($Script))
+    $out = & (Get-WcDesktopPowerShellPath) -NoProfile -NonInteractive -EncodedCommand $b64 2>&1
+    $code = $LASTEXITCODE
+    $text = (@($out | ForEach-Object { [string]$_ }) -join "`n").Trim()
+    if ($code -ne 0) { throw ('Windows PowerShell 5.1 bridge failed ({0}): {1}' -f $code, $text) }
+    if (-not $text) { return @() }
+    return @(ConvertFrom-Json -InputObject $text)
+}
+
 function Get-WcComputerRestorePointRaw {
-    <# Thin I/O (read-only listing). Windows PowerShell 5.1 only; needs elevation. #>
+    <# Thin I/O (read-only listing). Needs elevation. On PowerShell 7 it goes through the 5.1 bridge. #>
     [CmdletBinding()]
     param()
-    return @(Get-ComputerRestorePoint -ErrorAction Stop)
+    if ([string]$PSVersionTable['PSEdition'] -eq 'Desktop') { return @(Get-ComputerRestorePoint -ErrorAction Stop) }
+    $script = 'try { @(Get-ComputerRestorePoint -ErrorAction Stop | Select-Object SequenceNumber, CreationTime, Description, RestorePointType) | ConvertTo-Json -Compress -Depth 2 } catch { [Console]::Error.WriteLine($_.Exception.Message); exit 1 }'
+    return @(Invoke-WcDesktopPowerShell -Script $script | ForEach-Object { $_ })
 }
 
 function Get-WcRestorePoint {
@@ -222,6 +256,12 @@ function Invoke-WcCheckpointComputer {
     [CmdletBinding()]
     param([Parameter(Mandatory = $true)][ValidatePattern('^[A-Za-z0-9 \.\-]{1,100}$')][string] $Description)
     $warnings = @()
+    if ([string]$PSVersionTable['PSEdition'] -ne 'Desktop') {
+        # PowerShell 7: run the 5.1-only cmdlet in powershell.exe. $Description is limited by
+        # ValidatePattern to letters, digits, space, dot and dash, so it cannot break the quotes.
+        $script = 'try {{ $w = @(); Checkpoint-Computer -Description ''{0}'' -RestorePointType MODIFY_SETTINGS -ErrorAction Stop -WarningAction SilentlyContinue -WarningVariable w; ConvertTo-Json -Compress -InputObject @($w | ForEach-Object {{ [string]$_ }}) }} catch {{ [Console]::Error.WriteLine($_.Exception.Message); exit 1 }}' -f $Description
+        return @(Invoke-WcDesktopPowerShell -Script $script | ForEach-Object { [string]$_ })
+    }
     Checkpoint-Computer -Description $Description -RestorePointType 'MODIFY_SETTINGS' -ErrorAction Stop -WarningAction SilentlyContinue -WarningVariable warnings
     return @($warnings | ForEach-Object { [string]$_ })
 }
@@ -279,5 +319,5 @@ Export-ModuleMember -Function @('Register-WcBaselineHandler',
     'Get-WcFixedDriveRaw', 'ConvertTo-WcFreeSpaceMetric', 'Measure-WcSystemFreeSpace',
     'ConvertFrom-WcDmtfDate', 'ConvertTo-WcRestorePointRow', 'Select-WcRecentRestorePoint', 'Test-WcVolumeProtected',
     'ConvertTo-WcRestorePointAvailability', 'Get-WcRestorePointFacts', 'Get-WcRestorePointAvailability',
-    'Get-WcComputerRestorePointRaw', 'Get-WcRestorePoint', 'Get-WcRestorePointDescription', 'Invoke-WcCheckpointComputer', 'New-WcRestorePoint'
+    'Get-WcDesktopPowerShellPath', 'Invoke-WcDesktopPowerShell', 'Get-WcComputerRestorePointRaw', 'Get-WcRestorePoint', 'Get-WcRestorePointDescription', 'Invoke-WcCheckpointComputer', 'New-WcRestorePoint'
 )

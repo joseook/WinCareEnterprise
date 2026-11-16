@@ -336,7 +336,8 @@ Describe 'Restore point data (pure)' {
     It 'availability: <Name> -> <Reason>' -ForEach @(
         @{ Name = 'all good'; Override = @{}; Reason = '' }
         @{ Name = 'Linux'; Override = @{ IsWindows = $false }; Reason = 'not-windows' }
-        @{ Name = 'pwsh 7'; Override = @{ PSEdition = 'Core' }; Reason = 'powershell-edition' }
+        @{ Name = 'pwsh 7 without bridge'; Override = @{ PSEdition = 'Core'; DesktopBridge = $false }; Reason = 'powershell-edition' }
+        @{ Name = 'pwsh 7 with 5.1 bridge'; Override = @{ PSEdition = 'Core'; DesktopBridge = $true }; Reason = '' }
         @{ Name = 'no cmdlet'; Override = @{ HasCheckpointCommand = $false }; Reason = 'cmdlet-missing' }
         @{ Name = 'server'; Override = @{ ProductType = 3 }; Reason = 'server-sku' }
         @{ Name = 'policy'; Override = @{ PolicyDisableSR = 1 }; Reason = 'disabled-by-policy' }

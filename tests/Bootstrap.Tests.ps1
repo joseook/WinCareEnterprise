@@ -267,3 +267,15 @@ Describe 'Elevated command' {
         { Invoke-WcbMain -Version '1.2.3' -PackagePath 'x.zip' -ManifestPath 'x.json' -Elevate } | Should -Throw '*online only*'
     }
 }
+
+Describe 'App host selection (PowerShell 7 / 5.1)' {
+    BeforeAll {
+        $script:with7 = [pscustomobject]@{ WindowsPowerShell = 'C:\W\powershell.exe'; PowerShell7 = 'C:\P\PowerShell\7\pwsh.exe'; HasPowerShell7 = $true }
+        $script:no7 = [pscustomobject]@{ WindowsPowerShell = 'C:\W\powershell.exe'; PowerShell7 = 'C:\P\PowerShell\7\pwsh.exe'; HasPowerShell7 = $false }
+    }
+    It 'Auto prefers PowerShell 7 when installed' { Select-WcbAppHost -Candidates $script:with7 | Should -Be 'C:\P\PowerShell\7\pwsh.exe' }
+    It 'Auto falls back to Windows PowerShell 5.1' { Select-WcbAppHost -Candidates $script:no7 | Should -Be 'C:\W\powershell.exe' }
+    It 'WindowsPowerShell forces 5.1' { Select-WcbAppHost -Preference WindowsPowerShell -Candidates $script:with7 | Should -Be 'C:\W\powershell.exe' }
+    It 'PowerShell7 fails clearly when missing' { { Select-WcbAppHost -Preference PowerShell7 -Candidates $script:no7 } | Should -Throw '*not found*' }
+    It 'PowerShell 7 candidate is only the Program Files location' { (Get-WcbHostCandidates).PowerShell7 | Should -Match 'PowerShell.7.pwsh\.exe$' }
+}

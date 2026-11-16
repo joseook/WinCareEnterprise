@@ -67,7 +67,7 @@ Decisão: **LIBERADO COM RESSALVAS para o release v0.2.0** (publicação autoriz
 | Item | Motivo | Controle compensatório | Dono | Expira em |
 |---|---|---|---|---|
 | Kit de validação sem assinatura | É kit de laboratório, não release | Só VM/laboratório; SHA-256 por canal separado; bootstrapper rejeita o kit | Mantenedor | — |
-| T7: chave RSA sem HSM | Custo; projeto pessoal open source | Chave fora do repo/CI, permissão 600, troca documentada; Authenticode opcional pela PKI da organização | Mantenedor (aceite do usuário pendente) | 2027-05-16 |
+| T7: chave RSA sem HSM | Custo; projeto pessoal open source | Chave fora do repo/CI, permissão 600, troca documentada; Authenticode opcional pela PKI da organização | Mantenedor — aceito por escrito pelo usuário em 2026-11-16 | 2027-05-16 |
 
 ## Histórico
 - 2026-11-16: gate inicial (F1/F2).

@@ -65,9 +65,15 @@ Describe 'F5 on real Windows' -Tag 'Windows' {
         $f.IsWindows | Should -BeTrue
         $av = ConvertTo-WcRestorePointAvailability -Facts $f
         $av.Reason | Should -BeIn @('', 'powershell-edition', 'cmdlet-missing', 'server-sku', 'disabled-by-policy', 'protection-disabled', 'requires-admin')
-        if ($PSVersionTable.PSEdition -ne 'Desktop') { $av.Reason | Should -Be 'powershell-edition' }
-        if ($null -ne $f.ProductType -and [int]$f.ProductType -ne 1 -and $PSVersionTable.PSEdition -eq 'Desktop' -and $f.HasCheckpointCommand) { $av.Reason | Should -Be 'server-sku' }
+        if ($PSVersionTable.PSEdition -ne 'Desktop') { $f.DesktopBridge | Should -BeTrue -Because 'PowerShell 7 uses the Windows PowerShell 5.1 bridge' }
+        if ($null -ne $f.ProductType -and [int]$f.ProductType -ne 1 -and $f.HasCheckpointCommand) { $av.Reason | Should -Be 'server-sku' }
         Write-Host ('Restore point availability: available={0} reason={1} protection={2} productType={3} edition={4}' -f $av.Available, $av.Reason, $av.ProtectionEnabled, $f.ProductType, $PSVersionTable.PSEdition)
+    }
+    It 'Windows PowerShell 5.1 bridge runs a fixed script and returns JSON' {
+        $r = @(Invoke-WcDesktopPowerShell -Script 'ConvertTo-Json -Compress -InputObject @([string]$PSVersionTable.PSEdition, $PSVersionTable.PSVersion.Major)')
+        $r[0] | Should -Be 'Desktop'
+        $r[1] | Should -Be 5
+        { Invoke-WcDesktopPowerShell -Script 'exit 3' } | Should -Throw '*(3)*'
     }
     It 'New-WcRestorePoint never calls Checkpoint-Computer when unavailable, and only queries otherwise' {
         $av = Get-WcRestorePointAvailability

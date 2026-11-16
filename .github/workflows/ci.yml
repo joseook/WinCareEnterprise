@@ -1,4 +1,4 @@
-# CI - Windows PowerShell 5.1 (real WPF/CIM) + pwsh on Linux.
+# CI - Windows PowerShell 5.1 and PowerShell 7 on real Windows (WPF/CIM) + pwsh on Linux.
 name: ci
 on:
   push:
@@ -46,6 +46,36 @@ jobs:
         if: always()
         with:
           name: windows-ps51-results
+          path: TestResults/
+  windows-powershell-7:
+    name: PowerShell 7 on Windows (Pester + WPF render + real CIM)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install Pester 5 and PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Install-Module Pester -RequiredVersion 5.9.1 -Force -Scope CurrentUser -SkipPublisherCheck
+          Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Force -Scope CurrentUser
+      - name: Tests
+        shell: pwsh
+        run: |
+          $PSVersionTable | Format-Table -AutoSize | Out-String | Write-Host
+          ./scripts/Invoke-WinCareTests.ps1 -OutputDirectory ./TestResults
+      - name: UI screenshots (real WPF render on PowerShell 7)
+        if: always()
+        timeout-minutes: 10
+        shell: pwsh
+        run: pwsh -NoProfile -STA -File ./tests/Windows/Export-WinCareScreenshots.ps1
+      - name: Headless diagnostic report
+        if: always()
+        timeout-minutes: 10
+        shell: pwsh
+        run: ./src/Start-WinCare.ps1 -NoGui -OutputPath ./TestResults/diagnostic.html
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: windows-ps7-results
           path: TestResults/
   pwsh-linux:
     name: pwsh on Linux (portable logic only)
