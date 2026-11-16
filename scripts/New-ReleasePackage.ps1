@@ -32,7 +32,7 @@ foreach ($item in 'src', 'README.md', 'SECURITY.md', 'LICENSE') { Copy-Item -Lit
 
 $sigParams = @{ Certificate = $cert; HashAlgorithm = 'SHA256' }
 if ($TimestampServer) { $sigParams['TimestampServer'] = $TimestampServer }
-foreach ($f in Get-ChildItem -LiteralPath $stage -Recurse -File -Include '*.ps1', '*.psm1', '*.psd1') {
+foreach ($f in Get-ChildItem -LiteralPath $stage -Recurse -File | Where-Object { @('.ps1', '.psm1', '.psd1') -contains $_.Extension.ToLowerInvariant() }) {
     $r = Set-AuthenticodeSignature -FilePath $f.FullName @sigParams
     if ($r.Status -ne 'Valid') { throw "Signing failed for $($f.FullName): $($r.StatusMessage)" }
 }

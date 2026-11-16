@@ -237,7 +237,7 @@ function Test-WcbAuthenticode {
         if ([string]$res.Status -ne 'Valid') { $errors += "File catalog validation failed ($($res.Status))." }
     }
     catch { $errors += ('Test-FileCatalog failed: ' + $_.Exception.Message) }
-    foreach ($f in @(Get-ChildItem -LiteralPath $Root -Recurse -File -Include '*.ps1', '*.psm1', '*.psd1')) {
+    foreach ($f in @(Get-ChildItem -LiteralPath $Root -Recurse -File | Where-Object { @('.ps1', '.psm1', '.psd1') -contains $_.Extension.ToLowerInvariant() })) {
         $e = Test-WcbSignature -Path $f.FullName -TrustedThumbprints $trusted
         if ($e) { $errors += $e }
     }

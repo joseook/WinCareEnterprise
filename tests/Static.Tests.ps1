@@ -207,3 +207,9 @@ Describe 'Module manifest' {
         finally { $ps.Dispose() }
     }
 }
+
+Describe 'PS 5.1 pitfalls' {
+    It '<Name> never combines Get-ChildItem -LiteralPath with -Include (5.1 ignores -Include)' -ForEach $script:ShippedFiles {
+        Get-Content -Raw -LiteralPath $Path | Should -Not -Match 'Get-ChildItem\s+-LiteralPath[^|\r\n]*-Include'
+    }
+}

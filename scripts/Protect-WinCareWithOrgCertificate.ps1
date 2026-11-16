@@ -102,7 +102,7 @@ function Protect-WcFolderWithCertificate {
         [string] $TimestampServer
     )
     $problems = @()
-    $scripts = @(Get-ChildItem -LiteralPath $Root -Recurse -File -Include '*.ps1', '*.psm1', '*.psd1')
+    $scripts = @(Get-ChildItem -LiteralPath $Root -Recurse -File | Where-Object { @('.ps1', '.psm1', '.psd1') -contains $_.Extension.ToLowerInvariant() })
     foreach ($f in $scripts) {
         $p = @{ FilePath = $f.FullName; Certificate = $Certificate; HashAlgorithm = 'SHA256' }
         if ($TimestampServer) { $p.TimestampServer = $TimestampServer }
