@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "comment": "Phase F6 - Processes and memory page (module WinCare.Processes). process.end needs the selection in Context.Parameters['process.end'] (docs/CONTRATO-ACOES.md section 6.1). No RAM cleaner / EmptyWorkingSet / standby purge actions on purpose.",
+  "actions": [
+    { "Id": "process.end", "Category": "Processes", "Risk": "Medium", "Modifies": true, "RequiresAdmin": false, "Reversible": false, "Reversibility": "None",
+      "RequiresWindows": true, "BlockedWhenManaged": false, "MinBuild": 10240, "Editions": null, "Pages": ["processes"],
+      "Handler": "Processes-End", "TitleKey": "action.process.end", "DescriptionKey": "action.process.end.desc" },
+    { "Id": "memory.schedule-diagnostic", "Category": "Diagnostics", "Risk": "Low", "Modifies": true, "RequiresAdmin": false, "Reversible": false, "Reversibility": "None",
+      "RequiresWindows": true, "BlockedWhenManaged": false, "MinBuild": 10240, "Editions": null, "Pages": ["processes"],
+      "Handler": "Memory-ScheduleDiagnostic", "TitleKey": "action.memory.schedule-diagnostic", "DescriptionKey": "action.memory.schedule-diagnostic.desc" }
+  ]
+}
