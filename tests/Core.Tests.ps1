@@ -125,7 +125,9 @@ Describe 'Action catalog validation' {
     It 'loads the shipped catalog' {
         $c = Import-WcActionCatalog -Path (Join-Path $script:SrcRoot 'Core/actions.json')
         $c.Count | Should -BeGreaterThan 0
-        @($c | Where-Object { $_.Modifies }).Count | Should -Be 0 -Because 'phase F1/F2 ships read-only actions only'
+        foreach ($a in @($c | Where-Object { $_.Modifies })) {
+            (Test-WcActionAllowed -Action $a -OperationProfile (Get-WcProfile 'Diagnostico') -Context (New-WcContext -IsAdmin $true -Build 26100)).Allowed | Should -BeFalse -Because $a.Id
+        }
     }
 }
 

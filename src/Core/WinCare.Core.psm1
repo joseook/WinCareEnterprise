@@ -191,7 +191,19 @@ function Import-WcLocalization {
     if ((Get-WcSupportedLanguages) -notcontains $Language) { $Language = 'pt-BR' }
     $path = Join-Path $Root ("$Language.json")
     if (-not (Test-Path -LiteralPath $path)) { throw "Localization file not found: $path" }
-    $script:WcState.Strings = Read-WcJsonFile -Path $path
+    $strings = Read-WcJsonFile -Path $path
+    # Module fragments: Localization/<lang>.d/*.json (one file per feature module).
+    $fragDir = Join-Path $Root ("$Language.d")
+    if (Test-Path -LiteralPath $fragDir) {
+        foreach ($f in @(Get-ChildItem -LiteralPath $fragDir -Filter '*.json' | Sort-Object Name)) {
+            $frag = Read-WcJsonFile -Path $f.FullName
+            foreach ($k in $frag.Keys) {
+                if ($strings.ContainsKey($k)) { throw "Duplicate localization key '$k' in $($f.Name)" }
+                $strings[$k] = $frag[$k]
+            }
+        }
+    }
+    $script:WcState.Strings = $strings
     $script:WcState.Language = $Language
     return $script:WcState.Strings
 }
@@ -334,6 +346,11 @@ function Test-WcActionDefinition {
             if ($script:WcProtectedFeatures -contains $t) { $errors += "touches protected feature '$t'" }
         }
     }
+    if ($Action.ContainsKey('Pages')) {
+        foreach ($pg in @($Action.Pages)) {
+            if (@('quick', 'advanced', 'integrity', 'office', 'storage', 'startup') -notcontains $pg) { $errors += "invalid page '$pg'" }
+        }
+    }
     if ($Action.ContainsKey('MinBuild') -and $null -ne $Action.MinBuild -and $Action.MinBuild -isnot [int] -and $Action.MinBuild -isnot [long]) {
         $errors += 'MinBuild must be an integer'
     }
@@ -346,9 +363,18 @@ function Import-WcActionCatalog {
     param([Parameter(Mandatory = $true)][string] $Path)
     $data = Read-WcJsonFile -Path $Path
     if (-not $data.ContainsKey('actions')) { throw "Catalog has no 'actions' array: $Path" }
+    $all = @($data.actions)
+    # Module fragments: <catalog dir>/actions.d/*.json, same schema.
+    $fragDir = Join-Path (Split-Path -Parent $Path) 'actions.d'
+    if (Test-Path -LiteralPath $fragDir) {
+        foreach ($f in @(Get-ChildItem -LiteralPath $fragDir -Filter '*.json' | Sort-Object Name)) {
+            $frag = Read-WcJsonFile -Path $f.FullName
+            if ($frag.ContainsKey('actions')) { $all += @($frag.actions) }
+        }
+    }
     $ids = @{}
     $actions = @()
-    foreach ($a in @($data.actions)) {
+    foreach ($a in $all) {
         $errs = @(Test-WcActionDefinition -Action $a)
         if ($errs.Count -gt 0) { throw ("Invalid action '{0}': {1}" -f $a['Id'], ($errs -join '; ')) }
         if ($ids.ContainsKey($a.Id)) { throw "Duplicate action id: $($a.Id)" }
@@ -356,6 +382,25 @@ function Import-WcActionCatalog {
         $actions += , $a
     }
     return , $actions
+}
+
+function New-WcActionResult {
+    <# Standard result object returned by every handler Preview/Execute (docs/CONTRATO-ACOES.md). #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string] $Summary,
+        [object[]] $Items = @(),
+        $BytesBefore = $null,
+        $BytesAfter = $null,
+        $BytesFreed = $null,
+        [string] $Output = $null,
+        $ExitCode = $null,
+        $RollbackData = $null
+    )
+    return [pscustomobject]@{
+        Summary = $Summary; Items = @($Items); BytesBefore = $BytesBefore; BytesAfter = $BytesAfter; BytesFreed = $BytesFreed
+        Output = $Output; ExitCode = $ExitCode; RollbackData = $RollbackData
+    }
 }
 
 # ----------------------------------------------------------- policy engine --
@@ -533,6 +578,6 @@ Export-ModuleMember -Function @(
     'Get-WcSupportedLanguages', 'Import-WcLocalization', 'Get-WcString', 'Get-WcLocalizedValue',
     'Get-WcDefaultSettings', 'Test-WcSettings', 'Read-WcSettings', 'Save-WcSettings',
     'Get-WcProfile', 'Register-WcActionHandler', 'Get-WcActionHandlerNames', 'Clear-WcActionHandlers',
-    'Test-WcActionDefinition', 'Import-WcActionCatalog', 'New-WcContext', 'Test-WcActionAllowed',
+    'Test-WcActionDefinition', 'Import-WcActionCatalog', 'New-WcActionResult', 'New-WcContext', 'Test-WcActionAllowed',
     'New-WcPlan', 'Invoke-WcPlan', 'Test-WcPathWithin', 'Test-WcDriveLetter'
 )
