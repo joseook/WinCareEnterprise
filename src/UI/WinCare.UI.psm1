@@ -381,7 +381,7 @@ function Update-WcReportsPage {
     $hist = @(foreach ($h in @(Read-WcHistory -Directory (Join-Path (Get-WcDataRoot) 'history') -Last 200)) {
         if ($null -eq $h) { continue }
         $freed = ''; $bf = $h.PSObject.Properties['bytesFreed']; if ($bf -and $null -ne $bf.Value) { $freed = Format-WcBytes $bf.Value }
-        [pscustomobject]@{ Modified = ([datetime]$h.time).ToLocalTime().ToString('g'); Action = (Get-WcString ('action.' + $h.action)); Mode = $h.mode; Status = $h.status; Summary = $h.summary; Freed = $freed }
+        [pscustomobject]@{ Modified = ([datetime]$h.time).ToLocalTime().ToString('g'); Action = (Get-WcString ('action.' + $h.action)); Mode = $h.mode; Status = $h.status; Summary = $h.summary; Freed = $freed; FreeDelta = $(if ($null -ne (Get-WcOptionalValue $h 'freeBytesDelta')) { Format-WcBytesDelta $h.freeBytesDelta } else { '' }); RestorePoint = (Get-WcRestorePointText (Get-WcOptionalValue $h 'restorePoint')) }
     })
     if ($hist.Count -gt 1) { [array]::Reverse($hist) }
     Set-WcGridRows -Grid $p.FindName('ActionsHistoryGrid') -Rows @($hist)
@@ -463,6 +463,26 @@ function Get-WcSelectedActionIds {
     return @($Page.FindName('ActionsList').Children | ForEach-Object { $_.Child } | Where-Object { $_.IsChecked -eq $true } | ForEach-Object { [string]$_.Tag })
 }
 
+function Get-WcRestorePointText {
+    <# 'Criado', 'Indisponivel (motivo)'... from a result/history restore-point object; '' when none. #>
+    param($RestorePoint)
+    if ($null -eq $RestorePoint) { return '' }
+    $st = $RestorePoint.PSObject.Properties['Status']; if (-not $st) { $st = $RestorePoint.PSObject.Properties['status'] }
+    if (-not $st -or -not $st.Value) { return '' }
+    $txt = Get-WcString ('restorepoint.status.' + $st.Value)
+    $rs = $RestorePoint.PSObject.Properties['Reason']; if (-not $rs) { $rs = $RestorePoint.PSObject.Properties['reason'] }
+    if ($rs -and $rs.Value) { $txt = '{0} ({1})' -f $txt, (Get-WcString ('restorepoint.reason.' + $rs.Value)) }
+    return $txt
+}
+
+function Get-WcOptionalValue {
+    param($Object, [string] $Name)
+    if ($null -eq $Object) { return $null }
+    $p = $Object.PSObject.Properties[$Name]
+    if ($p) { return $p.Value }
+    return $null
+}
+
 function Show-WcActionResults {
     param([string] $PageId, $Results)
     $p = $script:Ui.Pages[$PageId]; if (-not $p) { return }
@@ -479,7 +499,10 @@ function Show-WcActionResults {
         }
         elseif ($o) { $summary = [string]$o }
         if ($r.Error) { $summary = ($summary + ' ' + $r.Error).Trim() }
-        $rows += [pscustomobject]@{ Action = (Get-WcString ('action.' + $r.ActionId)); Mode = $r.Mode; Status = $r.Status; Summary = $summary; Freed = $freed }
+        $freeDelta = ''; $cmp = Get-WcOptionalValue $r 'Comparison'
+        $fd = Get-WcOptionalValue $cmp 'FreeBytesDelta'
+        if ($null -ne $fd) { $freeDelta = Format-WcBytesDelta $fd }
+        $rows += [pscustomobject]@{ Action = (Get-WcString ('action.' + $r.ActionId)); Mode = $r.Mode; Status = $r.Status; Summary = $summary; Freed = $freed; FreeDelta = $freeDelta; RestorePoint = (Get-WcRestorePointText (Get-WcOptionalValue $r 'RestorePoint')) }
     }
     Set-WcGridRows -Grid $p.FindName('ResultGrid') -Rows $rows
     Set-WcGridRows -Grid $p.FindName('DetailGrid') -Rows @($details | Select-Object -First 500)
