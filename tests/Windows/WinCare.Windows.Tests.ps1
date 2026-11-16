@@ -82,14 +82,25 @@ Describe 'Real WPF (no window shown)' -Tag 'Windows' {
     }
 }
 
+Describe 'Real RSA verification on .NET Framework' -Tag 'Windows' {
+    BeforeAll { . (Join-Path $script:RepoRoot 'bootstrap/Install-WinCare.ps1') }
+    It 'verifies a PKCS#1 SHA-256 signature with RSAParameters on Windows PowerShell' {
+        $rsa = [System.Security.Cryptography.RSA]::Create(); $rsa.KeySize = 2048
+        $p = $rsa.ExportParameters($false)
+        $f = Join-Path (New-WcTestDir) 'm.json'
+        Set-Content -LiteralPath $f -Value '{"a":1}'
+        [System.IO.File]::WriteAllBytes($f + '.sig', $rsa.SignData([System.IO.File]::ReadAllBytes($f), [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1))
+        Test-WcbManifestSignature -ManifestPath $f -SignaturePath ($f + '.sig') -Keys @(@{ Modulus = [Convert]::ToBase64String($p.Modulus); Exponent = [Convert]::ToBase64String($p.Exponent) }) | Should -BeNullOrEmpty
+    }
+}
+
 Describe 'Real Authenticode rejection' -Tag 'Windows' {
     BeforeAll { . (Join-Path $script:RepoRoot 'bootstrap/Install-WinCare.ps1') }
     It 'rejects an unsigned package with the real cmdlets' {
         $d = New-WcTestDir
         Set-Content -LiteralPath (Join-Path $d 'a.ps1') -Value '#'
         New-FileCatalog -Path $d -CatalogFilePath (Join-Path $d 'WinCare.cat') -CatalogVersion 2.0 | Out-Null
-        $r = Test-WcbPackage -Root $d -TrustedThumbprints @('0000000000000000000000000000000000000000')
-        $r.Valid | Should -BeFalse
-        ($r.Errors -join ' ') | Should -Match 'NotSigned|not valid'
+        $errs = @(Test-WcbAuthenticode -Root $d -TrustedThumbprints @('0000000000000000000000000000000000000000'))
+        ($errs -join ' ') | Should -Match 'NotSigned|not valid'
     }
 }

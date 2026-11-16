@@ -7,41 +7,31 @@
 .DESCRIPTION
     Trust model (fail closed - any check that cannot be completed stops the run):
       1. Trust anchors are constants in THIS file: the official release URL and the
-         pinned thumbprints of the code-signing certificate(s). This bootstrapper
-         is itself Authenticode-signed and obtained from a trusted channel
-         (internal share, signed release, or copied by the technician).
-      2. The package (zip) is downloaded over HTTPS from the pinned URL, or taken
-         from a local path for offline use.
-      3. Transport integrity: SHA-256 of the zip must match the release manifest
-         and, if given, -ExpectedSha256 obtained out of band. These hashes are NOT
-         treated as proof of authenticity (same origin).
-      4. Authenticity: the zip is expanded with path-traversal checks into a
-         staging folder; WinCare.cat (signed file catalog) must have a Valid
-         Authenticode signature from a pinned thumbprint; Test-FileCatalog must
-         report every file unchanged and no extra files; every .ps1/.psm1/.psd1
-         must also carry a Valid signature from a pinned thumbprint.
-      5. Only then is the package moved into a versioned cache and started.
-         The cached copy is re-verified on every start.
+         pinned RSA public key(s) of the release signer (optionally also pinned
+         Authenticode thumbprints). This file is obtained by a command that pins
+         its SHA-256 (see docs/EXECUCAO.md).
+      2. The release manifest lists the SHA-256 of the zip and of every file in it.
+         Its detached signature (RSA-3072, PKCS#1 v1.5, SHA-256) must verify with a
+         pinned key BEFORE anything else is trusted.
+      3. The zip hash must match the signed manifest (and -ExpectedSha256, if given).
+      4. The zip is expanded with path-traversal checks; the file set must match
+         the manifest exactly (no missing, modified or extra files).
+      5. If Authenticode thumbprints are pinned, every script and WinCare.cat must
+         also carry a Valid signature from them (extra layer for signed builds).
+      6. The verified package goes to a versioned cache and is re-verified on every
+         start. WinCare is started with process-scope RemoteSigned, which never
+         overrides Group Policy (MachinePolicy/UserPolicy win).
 
 .PARAMETER Version
-    Release to start, e.g. 0.1.0. Required: versions are always explicit.
-
+    Release to start (x.y.z). Defaults to the release this file was published with.
 .PARAMETER PackagePath
-    Offline mode: local WinCare-<version>.zip previously obtained from a trusted source.
-
+    Offline mode: local WinCare-<version>.zip.
 .PARAMETER ManifestPath
-    Offline mode: local release manifest (optional but recommended).
-
+    Offline mode: local WinCare-<version>.manifest.json (its .sig must sit next to it).
 .PARAMETER ExpectedSha256
-    SHA-256 of the zip obtained out of band (e.g. from the change ticket).
-
+    SHA-256 of the zip obtained out of band.
 .PARAMETER VerifyOnly
     Verify and cache, but do not start the interface.
-
-.EXAMPLE
-    powershell.exe -NoProfile -File .\Install-WinCare.ps1 -Version 0.1.0
-.EXAMPLE
-    powershell.exe -NoProfile -File .\Install-WinCare.ps1 -Version 0.1.0 -PackagePath E:\WinCare-0.1.0.zip -ManifestPath E:\WinCare-0.1.0.manifest.json
 #>
 [CmdletBinding()]
 param(
@@ -56,12 +46,18 @@ param(
 Set-StrictMode -Version 2.0
 
 # ----------------------------------------------------------- trust anchors --
-# Edit ONLY when cutting an official release, then sign this file.
-$script:WcbReleaseBaseUri = 'https://github.com/OWNER/WinCareEnterprise/releases/download'
+$script:WcbDefaultVersion = ''
+$script:WcbReleaseBaseUri = 'https://github.com/joseook/WinCareEnterprise/releases/download'
 $script:WcbAllowedHosts = @('github.com')
-# SHA-1 thumbprints (as shown by Get-AuthenticodeSignature) of trusted signing certs.
-# Empty = no trusted publisher yet = every package is rejected.
+# Pinned release-signing public keys (RSA, base64 big-endian modulus/exponent).
+# Empty = nothing is trusted = every package is rejected.
+$script:WcbTrustedKeys = @(
+    @{ Id = 'wincare-release-2026-9a1d48ccd780'; Exponent = 'AQAB'
+        Modulus = 'r2BhlPWtx9W2BS2KawBDVvYOs7IFs6RqzgO0i24TtijX+fBPGm/HGPCMIbc83lyKOgSAjHfGDybAnApPsNzw3yFbBIQSDe7BKxLe6BUUyZsItdDYCBfad7A0aMBBtdc0YPNmHN89MkzSe6tYnA9uOFKcuc/rSNzbi2hZT7ORC6EnlOlRhNVa1lqeMmZAdV6p3teIyZ1ThZsuyEAjhzjmjw1ZEEp0mVxY6h9eokvLYByQT+6JT8OZ8DNM9fl1n3rXBfSgRgiyzyyUFEYLE0rEo50yXBLMqZN2iHVlXjbEJnnTZkDZSx1sumc6FzWuLJjKt/RJBxwaUvSlP3JmxHHkr5T0waYjQp9vhZTKyXbUxLH1oUze3W0v6EVmYwttVQAhgD/5Qp0LEVxiLYykZ9UDb/kE/jTP2x9957HX6aABXCXzD2tc4unYMdf38bZPdbTlNSN1D1llVXBY7zzvgn5vnILprSRhwTdrk3QI6H+H5yWu9zEC2kHnMe/tVZ4vzS17' }
+)
+# Optional extra layer: pinned Authenticode thumbprints. Empty = layer disabled.
 $script:WcbTrustedThumbprints = @()
+$script:WcbMetaFiles = @('.wincare-manifest.json', '.wincare-manifest.json.sig')
 
 # ----------------------------------------------------------------- helpers --
 
@@ -76,7 +72,7 @@ function Test-WcbSha256Text {
 }
 
 function Test-WcbReleaseUri {
-    <# HTTPS + allowlisted host + not the placeholder. #>
+    <# HTTPS + allowlisted host + not a placeholder. #>
     param([string] $Uri, [string[]] $AllowedHosts = $script:WcbAllowedHosts)
     if (-not $Uri -or $Uri -match '/OWNER/') { return $false }
     $u = $null
@@ -96,26 +92,49 @@ function Get-WcbSha256 {
     return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToUpperInvariant()
 }
 
-function Read-WcbManifest {
-    <# { "version": "x.y.z", "files": [ { "name": "...", "sha256": "...", "size": n } ] } #>
+function Test-WcbRelativePath {
     param([string] $Path)
-    $m = [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::UTF8) | ConvertFrom-Json
-    if (-not ($m.PSObject.Properties['version'] -and $m.PSObject.Properties['files'])) { throw 'Manifest missing version/files.' }
-    foreach ($f in @($m.files)) {
-        if (-not (Test-WcbSha256Text $f.sha256)) { throw ("Manifest has an invalid hash for '{0}'." -f $f.name) }
-        if ($f.name -match '[\\/]' -or $f.name -match '\.\.') { throw ("Manifest has an invalid file name '{0}'." -f $f.name) }
-    }
-    return $m
+    if (-not $Path) { return $false }
+    $p = $Path.Replace('\', '/')
+    if ($p.StartsWith('/') -or $p -match '^[A-Za-z]:' -or ($p.Split('/') -contains '..') -or ($p.Split('/') -contains '.')) { return $false }
+    return ($p -match '^[A-Za-z0-9 _\-\./]+$')
 }
 
-function Test-WcbFileAgainstManifest {
-    param([string] $FilePath, $Manifest, [string] $Version)
-    $name = [System.IO.Path]::GetFileName($FilePath)
-    if ([string]$Manifest.version -ne $Version) { return "Manifest version '$($Manifest.version)' differs from requested '$Version'." }
-    $entry = @($Manifest.files | Where-Object { $_.name -eq $name }) | Select-Object -First 1
-    if (-not $entry) { return "File '$name' not listed in manifest." }
-    if ((Get-WcbSha256 $FilePath) -ne ([string]$entry.sha256).ToUpperInvariant()) { return "SHA-256 mismatch for '$name'." }
-    return $null
+function Test-WcbManifestSignature {
+    <# Returns $null when the detached signature verifies with a pinned key, else an error string. #>
+    param([string] $ManifestPath, [string] $SignaturePath, [object[]] $Keys = $script:WcbTrustedKeys)
+    if (@($Keys).Count -eq 0) { return 'No trusted release key configured in the bootstrapper (fail closed).' }
+    if (-not (Test-Path -LiteralPath $SignaturePath)) { return 'Manifest signature (.sig) not found.' }
+    $data = [System.IO.File]::ReadAllBytes($ManifestPath)
+    $sig = [System.IO.File]::ReadAllBytes($SignaturePath)
+    foreach ($k in @($Keys)) {
+        $rsa = [System.Security.Cryptography.RSA]::Create()
+        try {
+            $p = New-Object System.Security.Cryptography.RSAParameters
+            $p.Modulus = [System.Convert]::FromBase64String([string]$k.Modulus)
+            $p.Exponent = [System.Convert]::FromBase64String([string]$k.Exponent)
+            $rsa.ImportParameters($p)
+            if ($rsa.VerifyData($data, $sig, [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)) { return $null }
+        }
+        catch { Write-Verbose ('Key check failed: ' + $_.Exception.Message) }
+        finally { $rsa.Dispose() }
+    }
+    return 'Manifest signature is invalid or not from a trusted key.'
+}
+
+function Read-WcbManifest {
+    <# { version, package: { name, sha256, size }, files: [ { path, sha256 } ] } #>
+    param([string] $Path)
+    $m = [System.IO.File]::ReadAllText($Path, [System.Text.Encoding]::UTF8) | ConvertFrom-Json
+    foreach ($req in 'version', 'package', 'files') { if (-not $m.PSObject.Properties[$req]) { throw "Manifest missing '$req'." } }
+    if (-not (Test-WcbVersion ([string]$m.version))) { throw 'Manifest has an invalid version.' }
+    if (-not (Test-WcbSha256Text ([string]$m.package.sha256))) { throw 'Manifest has an invalid package hash.' }
+    if ([string]$m.package.name -match '[\\/]' -or [string]$m.package.name -match '\.\.') { throw 'Manifest has an invalid package name.' }
+    foreach ($f in @($m.files)) {
+        if (-not (Test-WcbRelativePath ([string]$f.path))) { throw ("Manifest has an invalid file path '{0}'." -f $f.path) }
+        if (-not (Test-WcbSha256Text ([string]$f.sha256))) { throw ("Manifest has an invalid hash for '{0}'." -f $f.path) }
+    }
+    return $m
 }
 
 function Expand-WcbZipSafe {
@@ -142,6 +161,26 @@ function Expand-WcbZipSafe {
     finally { $zip.Dispose() }
 }
 
+function Test-WcbFileSet {
+    <# Exact match between files on disk and the manifest list (no missing, modified or extra). #>
+    param([string] $Root, $Manifest)
+    $errors = @()
+    $rootFull = [System.IO.Path]::GetFullPath($Root).TrimEnd([System.IO.Path]::DirectorySeparatorChar)
+    $expected = @{}
+    foreach ($f in @($Manifest.files)) { $expected[([string]$f.path).Replace('\', '/').ToLowerInvariant()] = ([string]$f.sha256).ToUpperInvariant() }
+    $seen = @{}
+    foreach ($file in @(Get-ChildItem -LiteralPath $Root -Recurse -File -Force)) {
+        $rel = $file.FullName.Substring($rootFull.Length + 1).Replace('\', '/')
+        if ($script:WcbMetaFiles -contains $rel) { continue }
+        $key = $rel.ToLowerInvariant()
+        if (-not $expected.ContainsKey($key)) { $errors += "Extra file not in manifest: $rel"; continue }
+        $seen[$key] = $true
+        if ((Get-WcbSha256 $file.FullName) -ne $expected[$key]) { $errors += "Modified file: $rel" }
+    }
+    foreach ($k in $expected.Keys) { if (-not $seen.ContainsKey($k)) { $errors += "Missing file: $k" } }
+    return $errors
+}
+
 function Test-WcbSignature {
     param([string] $Path, [string[]] $TrustedThumbprints)
     $sig = Get-AuthenticodeSignature -LiteralPath $Path
@@ -151,29 +190,42 @@ function Test-WcbSignature {
     return $null
 }
 
-function Test-WcbPackage {
-    <# Verifies an expanded package folder. Returns @{ Valid; Errors }. #>
-    param([Parameter(Mandatory = $true)][string] $Root, [string[]] $TrustedThumbprints = $script:WcbTrustedThumbprints)
+function Test-WcbAuthenticode {
+    <# Optional layer: signed catalog + signed scripts from pinned thumbprints. #>
+    param([string] $Root, [string[]] $TrustedThumbprints)
     $errors = @()
     $trusted = @($TrustedThumbprints | ForEach-Object { ([string]$_).ToUpperInvariant() } | Where-Object { $_ })
-    if ($trusted.Count -eq 0) { return [pscustomobject]@{ Valid = $false; Errors = @('No trusted publisher configured in the bootstrapper (fail closed).') } }
     $cat = Join-Path $Root 'WinCare.cat'
-    if (-not (Test-Path -LiteralPath $cat)) { return [pscustomobject]@{ Valid = $false; Errors = @('WinCare.cat not found.') } }
+    if (-not (Test-Path -LiteralPath $cat)) { return @('WinCare.cat not found.') }
     $e = Test-WcbSignature -Path $cat -TrustedThumbprints $trusted
     if ($e) { $errors += $e }
     try {
-        $res = Test-FileCatalog -CatalogFilePath $cat -Path $Root -Detailed -FilesToSkip 'WinCare.cat' -ErrorAction Stop
+        $skip = @('WinCare.cat') + $script:WcbMetaFiles
+        $res = Test-FileCatalog -CatalogFilePath $cat -Path $Root -Detailed -FilesToSkip $skip -ErrorAction Stop
         if ([string]$res.Status -ne 'Valid') { $errors += "File catalog validation failed ($($res.Status))." }
-        $catKeys = @($res.CatalogItems.Keys | ForEach-Object { ([string]$_).ToLowerInvariant() })
-        foreach ($p in @($res.PathItems.Keys)) {
-            if ($catKeys -notcontains ([string]$p).ToLowerInvariant()) { $errors += "File not covered by catalog: $p" }
-        }
     }
     catch { $errors += ('Test-FileCatalog failed: ' + $_.Exception.Message) }
     foreach ($f in @(Get-ChildItem -LiteralPath $Root -Recurse -File -Include '*.ps1', '*.psm1', '*.psd1')) {
         $e = Test-WcbSignature -Path $f.FullName -TrustedThumbprints $trusted
         if ($e) { $errors += $e }
     }
+    return $errors
+}
+
+function Test-WcbPackage {
+    <# Verifies an expanded package. Returns @{ Valid; Errors }. #>
+    param(
+        [Parameter(Mandatory = $true)][string] $Root,
+        [Parameter(Mandatory = $true)][string] $ManifestPath,
+        [object[]] $Keys = $script:WcbTrustedKeys,
+        [string[]] $TrustedThumbprints = $script:WcbTrustedThumbprints
+    )
+    $errors = @()
+    $sigErr = Test-WcbManifestSignature -ManifestPath $ManifestPath -SignaturePath ($ManifestPath + '.sig') -Keys $Keys
+    if ($sigErr) { return [pscustomobject]@{ Valid = $false; Errors = @($sigErr) } }
+    $m = Read-WcbManifest $ManifestPath
+    $errors += @(Test-WcbFileSet -Root $Root -Manifest $m)
+    if (@($TrustedThumbprints | Where-Object { $_ }).Count -gt 0) { $errors += @(Test-WcbAuthenticode -Root $Root -TrustedThumbprints $TrustedThumbprints) }
     return [pscustomobject]@{ Valid = ($errors.Count -eq 0); Errors = $errors }
 }
 
@@ -191,15 +243,16 @@ function Invoke-WcbMain {
         [string] $Version, [string] $PackagePath, [string] $ManifestPath, [string] $ExpectedSha256,
         [string] $CacheRoot, [switch] $VerifyOnly
     )
+    if (-not $Version) { $Version = $script:WcbDefaultVersion }
     if (-not (Test-WcbVersion $Version)) { throw 'Use -Version x.y.z (explicit version is required).' }
     if ($ExpectedSha256 -and -not (Test-WcbSha256Text $ExpectedSha256)) { throw '-ExpectedSha256 must be 64 hex characters.' }
     if (-not $CacheRoot) { $CacheRoot = Get-WcbDefaultCacheRoot }
     $target = Join-Path $CacheRoot $Version
-    $zipName = "WinCare-$Version.zip"
+    $cachedManifest = Join-Path $target '.wincare-manifest.json'
 
     if (Test-Path -LiteralPath $target) {
         Write-Host "Verifying cached release $Version..."
-        $check = Test-WcbPackage -Root $target
+        $check = Test-WcbPackage -Root $target -ManifestPath $cachedManifest
         if (-not $check.Valid) {
             $check.Errors | ForEach-Object { Write-Warning $_ }
             throw "Cached release $Version failed verification. Remove '$target' and run again."
@@ -209,26 +262,35 @@ function Invoke-WcbMain {
         $work = Join-Path $CacheRoot ('.staging-' + [guid]::NewGuid().ToString('N'))
         New-Item -ItemType Directory -Path $work -Force | Out-Null
         try {
-            if ($PackagePath) {
-                $zip = (Resolve-Path -LiteralPath $PackagePath).ProviderPath
+            $man = Join-Path $work 'manifest.json'
+            if ($ManifestPath) {
+                Copy-Item -LiteralPath $ManifestPath -Destination $man
+                if (Test-Path -LiteralPath ($ManifestPath + '.sig')) { Copy-Item -LiteralPath ($ManifestPath + '.sig') -Destination ($man + '.sig') }
             }
             else {
-                $zip = Join-Path $work $zipName
-                $ManifestPath = Join-Path $work "WinCare-$Version.manifest.json"
-                Get-WcbDownload -Uri ("{0}/v{1}/{2}" -f $script:WcbReleaseBaseUri, $Version, $zipName) -OutFile $zip
-                Get-WcbDownload -Uri ("{0}/v{1}/WinCare-{1}.manifest.json" -f $script:WcbReleaseBaseUri, $Version) -OutFile $ManifestPath
+                $base = '{0}/v{1}/WinCare-{1}.manifest.json' -f $script:WcbReleaseBaseUri, $Version
+                Get-WcbDownload -Uri $base -OutFile $man
+                Get-WcbDownload -Uri ($base + '.sig') -OutFile ($man + '.sig')
             }
-            if ($ManifestPath) {
-                $err = Test-WcbFileAgainstManifest -FilePath $zip -Manifest (Read-WcbManifest $ManifestPath) -Version $Version
-                if ($err) { throw $err }
+            $sigErr = Test-WcbManifestSignature -ManifestPath $man -SignaturePath ($man + '.sig')
+            if ($sigErr) { throw $sigErr }
+            $m = Read-WcbManifest $man
+            if ([string]$m.version -ne $Version) { throw "Manifest version '$($m.version)' differs from requested '$Version'." }
+            if ($PackagePath) { $zip = (Resolve-Path -LiteralPath $PackagePath).ProviderPath }
+            else {
+                $zip = Join-Path $work ([string]$m.package.name)
+                Get-WcbDownload -Uri ('{0}/v{1}/{2}' -f $script:WcbReleaseBaseUri, $Version, $m.package.name) -OutFile $zip
             }
+            if ((Get-WcbSha256 $zip) -ne ([string]$m.package.sha256).ToUpperInvariant()) { throw 'SHA-256 mismatch between package and signed manifest.' }
             if ($ExpectedSha256 -and (Get-WcbSha256 $zip) -ne $ExpectedSha256.ToUpperInvariant()) { throw 'SHA-256 differs from -ExpectedSha256.' }
             $stage = Join-Path $work 'pkg'
             Expand-WcbZipSafe -ZipPath $zip -Destination $stage
-            $check = Test-WcbPackage -Root $stage
+            Copy-Item -LiteralPath $man -Destination (Join-Path $stage '.wincare-manifest.json')
+            Copy-Item -LiteralPath ($man + '.sig') -Destination (Join-Path $stage '.wincare-manifest.json.sig')
+            $check = Test-WcbPackage -Root $stage -ManifestPath (Join-Path $stage '.wincare-manifest.json')
             if (-not $check.Valid) {
                 $check.Errors | ForEach-Object { Write-Warning $_ }
-                throw 'Package rejected: signature/catalog verification failed. Nothing was started.'
+                throw 'Package rejected: verification failed. Nothing was started.'
             }
             Move-Item -LiteralPath $stage -Destination $target
         }
@@ -238,8 +300,12 @@ function Invoke-WcbMain {
     }
     Write-Host "WinCare $Version verified: $target"
     if ($VerifyOnly) { return $target }
-    $ps51 = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
-    Start-Process -FilePath $ps51 -ArgumentList @('-NoProfile', '-STA', '-File', ('"{0}"' -f (Join-Path $target 'src\Start-WinCare.ps1')))
+    $sysRoot = $env:SystemRoot
+    if (-not $sysRoot) { $sysRoot = 'C:\Windows' }
+    $ps51 = $sysRoot.TrimEnd('\') + '\System32\WindowsPowerShell\v1.0\powershell.exe'
+    # Process-scope RemoteSigned: lets the verified local copy run on machines left at
+    # the default 'Restricted'. Group Policy (MachinePolicy/UserPolicy) still wins.
+    Start-Process -FilePath $ps51 -ArgumentList @('-NoProfile', '-STA', '-ExecutionPolicy', 'RemoteSigned', '-File', ('"{0}"' -f (Join-Path $target 'src\Start-WinCare.ps1')))
     return $target
 }
 
