@@ -32,3 +32,12 @@ Saída: `validation-results\<PC>-<data>\` com `validation-report.md/json`, `pest
 
 ## 4. Critério de homologação
 Uma linha da matriz só vira "Validado" com: 0 FAIL no relatório daquela edição/build, checklist completo (sem SKIP) e o relatório anexado em `docs/validacoes/`.
+
+## 5. F5 — antes/depois e ponto de restauração (pendente de validação em cliente real)
+O CI (`windows-latest`, Windows Server) valida a medição real de espaço livre e o caminho `server-sku`; nunca cria ponto (o teste bloqueia `Checkpoint-Computer`). Em VM **Windows 10/11 cliente** com snapshot, como administrador, no Windows PowerShell 5.1:
+1. Proteção do Sistema **desligada** em C: → `Get-WcRestorePointAvailability` deve dar `protection-disabled` e nada deve ser criado.
+2. Ligue a proteção manualmente (Painel de Controle) → `Get-WcRestorePointAvailability` deve dar `Available=True`; confirme que o valor `SPP\Clients` lista `(C%3A)`.
+3. `New-WcRestorePoint -Description 'WinCare validation'` → `Created` com número novo em `Get-ComputerRestorePoint`.
+4. Repita em seguida → `Skipped / created-recently` referenciando o ponto do passo 3.
+5. `Get-WcRestorePoint` lista os pontos; como usuário padrão → `requires-admin`.
+Registre os resultados em `docs/validacoes/`. Até lá, a detecção por `SPP\Clients` é considerada **não validada**.

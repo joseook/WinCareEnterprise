@@ -18,6 +18,7 @@ Padrão em toda coleta: `Get-*` (fino, faz I/O, mockado nos testes) + `ConvertTo
 - Ação que declara tocar em recurso protegido (Defender, Firewall, BitLocker, Windows Update, GPO, MDM, EDR, VPN, autenticação, inventário, política de execução, UAC, SmartScreen) **é rejeitada ao carregar o catálogo** — nenhum perfil consegue liberá-la.
 - **Perfis**: Diagnóstico (somente leitura), Conservador (risco baixo), Corporativo (risco baixo + bloqueia ações sensíveis a políticas mesmo sem detectar gerenciamento), Avançado (até risco alto, confirmação individual).
 - **Plano**: `New-WcPlan` avalia cada ação → `Invoke-WcPlan` executa. `-DryRun` chama só `Preview`. Ação que modifica só executa com confirmação explícita. Tudo vai para o log de auditoria.
+- **Antes/depois e rollback (F5)**: `Invoke-WcPlan` mede antes/depois cada item executado (gancho genérico de espaço livre + `Measure` do handler) e, antes de itens de risco alto, pede um ponto de restauração ao gancho do `WinCare.Baseline` — só se a Proteção do Sistema já estiver ligada. Detalhes em `CONTRATO-ACOES.md` §5.
 
 ## Threading da interface
 - A thread do WPF nunca executa diagnóstico.
