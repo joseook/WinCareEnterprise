@@ -9,6 +9,8 @@ BeforeAll {
     $script:Tmp = New-WcTestDir
     Initialize-WcLog -Path (Join-Path $script:Tmp 'baseline.jsonl') | Out-Null
     Import-WcLocalization -Root (Join-Path $script:SrcRoot 'Localization') -Language 'pt-BR' | Out-Null
+    # Safety net for real Windows hosts, where Checkpoint-Computer is a real cmdlet.
+    Mock -ModuleName WinCare.Baseline Invoke-WcCheckpointComputer { throw 'Checkpoint-Computer must never run in tests' }
 
     function New-F5Action {
         param([hashtable] $Override = @{})
