@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<title>WinCare Enterprise</title>
+<style>
+:root{--bg:#0f1115;--card:#171a21;--text:#e6e9ef;--muted:#a3acbb;--accent:#2f6fdb;--border:#2c3342}
+@media (prefers-color-scheme: light){:root{--bg:#f4f6f9;--card:#fff;--text:#1b1f24;--muted:#57606a;--accent:#1f5fc7;--border:#d0d7e0}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 "Segoe UI",system-ui,sans-serif}
+main{max-width:860px;margin:0 auto;padding:48px 16px}h1{font-size:30px;margin:0 0 4px}p{color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin:20px 0}
+pre{white-space:pre-wrap;word-break:break-all;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;font:13px/1.5 Consolas,monospace;color:var(--text);margin:0}
+button{background:var(--accent);color:#fff;border:0;border-radius:6px;padding:9px 16px;font:inherit;cursor:pointer;margin-top:12px}
+button:focus-visible{outline:2px solid var(--text);outline-offset:2px}
+ol{padding-left:20px}code{font-family:Consolas,monospace}a{color:var(--accent)}
+</style>
+</head>
+<body><main>
+<h1>WinCare Enterprise</h1>
+<p>Diagnóstico e manutenção do Windows para técnicos. Versão 0.2.0. Open source (MIT).</p>
+<div class="card">
+<strong>1. Abra o PowerShell (de preferência como administrador) e cole:</strong>
+<pre id="cmd">$f=&quot;$env:TEMP\wincare-install.ps1&quot;; iwr https://wincare.joseok.cloud/install.ps1 -UseBasicParsing -OutFile $f; if ((Get-FileHash $f -Algorithm SHA256).Hash -eq &#39;76921CC70DE1B03D1B41DBB1A6AF13CD59B7BE363AEE66C4B29EA0E2F3B16BB8&#39;) { powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File $f } else { Write-Error &#39;install.ps1 nao confere - nada foi executado&#39; }</pre>
+<button type="button" id="copy">Copiar comando</button>
+</div>
+<div class="card">
+<strong>O que esse comando faz</strong>
+<ol>
+<li>Baixa o <code>install.ps1</code> e só executa se o SHA-256 bater com <code>76921CC70DE1B03D1B41DBB1A6AF13CD59B7BE363AEE66C4B29EA0E2F3B16BB8</code>.</li>
+<li>O <code>install.ps1</code> baixa o pacote do GitHub Releases e confere a assinatura do manifesto com a chave fixada nele, o hash do zip e de cada arquivo.</li>
+<li>Abre a interface. Nada é alterado no computador sem a sua confirmação.</li>
+</ol>
+<p>Usa <code>-ExecutionPolicy RemoteSigned</code> só neste processo: políticas de grupo da empresa continuam valendo. Não usa <code>irm | iex</code> nem <code>Bypass</code>.</p>
+<p>Confira o mesmo comando no <a href="https://github.com/joseook/WinCareEnterprise#readme">README do GitHub</a>. SHA-256 do pacote: <code>A6DC6E0DF1A34962C38BCF732982C1E72C50630C4F08326D6042515795AAB5AF</code>.</p>
+</div>
+</main>
+<script>
+document.getElementById('copy').addEventListener('click',function(){var b=this;navigator.clipboard.writeText(document.getElementById('cmd').textContent).then(function(){b.textContent='Copiado';setTimeout(function(){b.textContent='Copiar comando'},1500)})});
+</script>
+</body></html>
