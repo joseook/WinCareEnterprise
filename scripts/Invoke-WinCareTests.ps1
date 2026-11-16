@@ -11,9 +11,11 @@
 [CmdletBinding()]
 param(
     [string[]] $Tag,
-    [string] $OutputDirectory = (Join-Path (Split-Path -Parent $PSScriptRoot) 'TestResults')
+    [string] $OutputDirectory
 )
 $ErrorActionPreference = 'Stop'
+$repoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+if (-not $OutputDirectory) { $OutputDirectory = Join-Path $repoRoot 'TestResults' }
 $repo = Split-Path -Parent $PSScriptRoot
 
 $pester = Get-Module -ListAvailable Pester | Where-Object { $_.Version -ge [version]'5.0.0' -and $_.Version -lt [version]'6.0.0' } | Sort-Object Version -Descending | Select-Object -First 1

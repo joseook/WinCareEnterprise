@@ -85,7 +85,7 @@ Describe 'Real WPF (no window shown)' -Tag 'Windows' {
 Describe 'Real RSA verification on .NET Framework' -Tag 'Windows' {
     BeforeAll { . (Join-Path $script:RepoRoot 'bootstrap/Install-WinCare.ps1') }
     It 'verifies a PKCS#1 SHA-256 signature with RSAParameters on Windows PowerShell' {
-        $rsa = [System.Security.Cryptography.RSA]::Create(); $rsa.KeySize = 2048
+        $rsa = New-Object System.Security.Cryptography.RSACryptoServiceProvider(2048)
         $p = $rsa.ExportParameters($false)
         $f = Join-Path (New-WcTestDir) 'm.json'
         Set-Content -LiteralPath $f -Value '{"a":1}'

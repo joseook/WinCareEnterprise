@@ -9,8 +9,7 @@ BeforeAll {
     Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
 
     function New-TestKey {
-        $rsa = [System.Security.Cryptography.RSA]::Create()
-        $rsa.KeySize = 2048
+        $rsa = New-Object System.Security.Cryptography.RSACryptoServiceProvider(2048)
         $p = $rsa.ExportParameters($false)
         return @{ Rsa = $rsa; Pub = @{ Id = 'test'; Modulus = [Convert]::ToBase64String($p.Modulus); Exponent = [Convert]::ToBase64String($p.Exponent) } }
     }

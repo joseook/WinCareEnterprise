@@ -14,9 +14,11 @@
 param(
     [Parameter(Mandatory = $true)][ValidatePattern('^[A-Fa-f0-9]{40}$')][string] $CertificateThumbprint,
     [string] $TimestampServer,
-    [string] $OutputDirectory = (Join-Path (Split-Path -Parent $PSScriptRoot) 'dist')
+    [string] $OutputDirectory
 )
 $ErrorActionPreference = 'Stop'
+$repoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+if (-not $OutputDirectory) { $OutputDirectory = Join-Path $repoRoot 'dist' }
 if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) { throw 'Signing requires Windows.' }
 $repo = Split-Path -Parent $PSScriptRoot
 $version = (Import-PowerShellDataFile (Join-Path $repo 'src\WinCare.psd1')).ModuleVersion

@@ -20,9 +20,11 @@
 param(
     [string] $KeyPath = (Join-Path $HOME '.config/wincare-signing/release-key.pem'),
     [string] $SiteUrl = 'https://wincare.joseok.cloud',
-    [string] $OutputDirectory = (Join-Path (Split-Path -Parent $PSScriptRoot) 'dist')
+    [string] $OutputDirectory
 )
 $ErrorActionPreference = 'Stop'
+$repoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+if (-not $OutputDirectory) { $OutputDirectory = Join-Path $repoRoot 'dist' }
 $repo = Split-Path -Parent $PSScriptRoot
 $version = (Import-PowerShellDataFile (Join-Path $repo 'src/WinCare.psd1')).ModuleVersion
 if (-not (Test-Path -LiteralPath $KeyPath)) { throw "Signing key not found: $KeyPath" }

@@ -5,9 +5,12 @@
     diagnostic of this machine. Windows only; needs an STA host (powershell.exe -STA).
 #>
 [CmdletBinding()]
-param([string] $OutputDirectory = (Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) 'TestResults\screenshots'))
+param([string] $OutputDirectory)
 $ErrorActionPreference = 'Stop'
-$src = Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) 'src'
+# $PSScriptRoot is empty inside param() defaults on Windows PowerShell 5.1 -File runs.
+$repo = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+if (-not $OutputDirectory) { $OutputDirectory = Join-Path $repo 'TestResults\screenshots' }
+$src = Join-Path $repo 'src'
 Import-Module (Join-Path $src 'WinCare.psd1') -Force -DisableNameChecking
 Import-Module (Join-Path $src 'UI\WinCare.UI.psm1') -Force -DisableNameChecking
 $version = (Import-PowerShellDataFile (Join-Path $src 'WinCare.psd1')).ModuleVersion
