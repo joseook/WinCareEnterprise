@@ -475,15 +475,9 @@ function Export-WcUiReport {
 
 # --------------------------------------------------------------------- main --
 
-function Show-WcMainWindow {
-    <# Builds and shows the main window (blocking until closed). #>
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory = $true)][string] $AppRoot,
-        [Parameter(Mandatory = $true)][string] $Version,
-        [Parameter(Mandatory = $true)][hashtable] $Settings,
-        [switch] $NoAutoDiagnostic
-    )
+function Initialize-WcUi {
+    <# Builds UI state and the main window (not shown). Shared by Show-WcMainWindow and Export-WcUiSnapshot. #>
+    param([string] $AppRoot, [string] $Version, [hashtable] $Settings, [bool] $AutoDiagnostic)
     Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Xaml
     $script:Ui = @{
         AppRoot      = $AppRoot
@@ -501,7 +495,7 @@ function Show-WcMainWindow {
         Snapshot     = $null
         CurrentPage  = $null
         SuppressSettingEvents = $false
-        AutoDiagnostic = (-not $NoAutoDiagnostic)
+        AutoDiagnostic = $AutoDiagnostic
     }
     Set-WcLogSink -Sink $script:Ui.LogQueue
 
@@ -526,7 +520,19 @@ function Show-WcMainWindow {
     $timer.Interval = [TimeSpan]::FromMilliseconds(200)
     $timer.Add_Tick({ Receive-WcLogQueue; if ($script:Ui.Jobs.Count -gt 0) { Complete-WcUiJobs } })
     $script:Ui.Timer = $timer
+    return $window
+}
 
+function Show-WcMainWindow {
+    <# Builds and shows the main window (blocking until closed). #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string] $AppRoot,
+        [Parameter(Mandatory = $true)][string] $Version,
+        [Parameter(Mandatory = $true)][hashtable] $Settings,
+        [switch] $NoAutoDiagnostic
+    )
+    $window = Initialize-WcUi -AppRoot $AppRoot -Version $Version -Settings $Settings -AutoDiagnostic (-not $NoAutoDiagnostic)
     $window.Add_ContentRendered({
             $script:Ui.Timer.Start()
             Write-WcLog -Category 'UI' -Message ('WinCare Enterprise {0} started (PS {1}, admin={2}).' -f $script:Ui.Version, $PSVersionTable.PSVersion, $script:Ui.IsAdmin) | Out-Null
@@ -537,11 +543,58 @@ function Show-WcMainWindow {
             $script:Ui.Timer.Stop()
             Write-WcLog -Category 'UI' -Message 'WinCare Enterprise closed.' | Out-Null
         })
-
-    $nav.SelectedIndex = 0
+    $window.FindName('NavList').SelectedIndex = 0
     Update-WcHeader
     [void]$window.ShowDialog()
     Set-WcLogSink -Sink $null
 }
 
-Export-ModuleMember -Function @('Show-WcMainWindow', 'Import-WcXaml')
+function Export-WcUiSnapshot {
+    <#
+        Validation aid: renders every page to PNG (both themes) with a real
+        diagnostic snapshot, without user interaction. Used by CI and the kit.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string] $AppRoot,
+        [Parameter(Mandatory = $true)][string] $Version,
+        [Parameter(Mandatory = $true)][string] $OutputDirectory,
+        [Parameter(Mandatory = $true)] $Snapshot,
+        [string] $Language = 'pt-BR',
+        [string[]] $Theme = @('Dark', 'Light')
+    )
+    if (-not (Test-Path -LiteralPath $OutputDirectory)) { New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null }
+    $settings = @{ Theme = $Theme[0]; Language = $Language; Profile = 'Diagnostico' }
+    $window = Initialize-WcUi -AppRoot $AppRoot -Version $Version -Settings $settings -AutoDiagnostic $false
+    $script:Ui.Snapshot = $Snapshot
+    $window.WindowStartupLocation = 'Manual'
+    $window.Left = 0; $window.Top = 0; $window.Width = 1240; $window.Height = 800
+    $window.ShowActivated = $false
+    $window.Show()
+    $files = @()
+    foreach ($t in $Theme) {
+        Set-WcTheme -Theme $t
+        $i = 0
+        foreach ($id in @($script:PageDefs.Keys)) {
+            $i++
+            $window.FindName('NavList').SelectedIndex = $i - 1
+            Show-WcPage -PageId $id
+            $window.UpdateLayout()
+            $window.Dispatcher.Invoke([System.Action]{ }, [System.Windows.Threading.DispatcherPriority]::ApplicationIdle)
+            $w = [int]$window.ActualWidth; $h = [int]$window.ActualHeight
+            $bmp = New-Object System.Windows.Media.Imaging.RenderTargetBitmap($w, $h, 96, 96, [System.Windows.Media.PixelFormats]::Pbgra32)
+            $bmp.Render($window)
+            $enc = New-Object System.Windows.Media.Imaging.PngBitmapEncoder
+            $enc.Frames.Add([System.Windows.Media.Imaging.BitmapFrame]::Create($bmp))
+            $file = Join-Path $OutputDirectory ('{0:D2}-{1}-{2}-{3}.png' -f $i, $id, $t.ToLowerInvariant(), $Language)
+            $fs = [System.IO.File]::Create($file)
+            try { $enc.Save($fs) } finally { $fs.Dispose() }
+            $files += $file
+        }
+    }
+    $window.Close()
+    Set-WcLogSink -Sink $null
+    return $files
+}
+
+Export-ModuleMember -Function @('Show-WcMainWindow', 'Export-WcUiSnapshot', 'Import-WcXaml')
