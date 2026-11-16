@@ -2,7 +2,7 @@
 
 Ferramenta open source de diagnóstico e manutenção do Windows para técnicos e ambientes corporativos. PowerShell-first, interface WPF, sem instalador, sem `-ExecutionPolicy Bypass`.
 
-> **Estado: v0.2.1 — F1 a F5 + base corporativa + PowerShell 7.** Desenvolvido em Linux e testado no **Windows PowerShell 5.1 e no PowerShell 7 em Windows real** pelo CI (GitHub Actions, Windows Server): Pester, coleta CIM real, renderização WPF das 11 páginas e assinatura Authenticode com `AllSigned`. **Ainda falta homologar em Windows 10/11 cliente** com o checklist interativo (`docs/VALIDACAO-WINDOWS.md`). Matriz em `docs/COMPATIBILIDADE.md`.
+> **Estado: v0.3.0 — diagnóstico, manutenção, processos e memória, saúde do sistema, aplicativos e rede; PowerShell 5.1 e 7.** Desenvolvido em Linux e testado no **Windows PowerShell 5.1 e no PowerShell 7 em Windows real** pelo CI (GitHub Actions, Windows Server): Pester, coleta CIM real, renderização WPF das 11 páginas e assinatura Authenticode com `AllSigned`. **Ainda falta homologar em Windows 10/11 cliente** com o checklist interativo (`docs/VALIDACAO-WINDOWS.md`). Matriz em `docs/COMPATIBILIDADE.md`.
 
 ## Executar
 
@@ -15,7 +15,7 @@ irm https://wincare.joseok.cloud/run | iex
 Ou o comando **verificado**, com o hash do `install.ps1` fixado aqui no README (canal independente do site):
 
 ```powershell
-$f="$env:TEMP\wincare-install.ps1"; iwr https://wincare.joseok.cloud/install.ps1 -UseBasicParsing -OutFile $f; if ((Get-FileHash $f -Algorithm SHA256).Hash -eq '91A17278E24A87F74C1BD1AFF637615625C45F76BF8D69F4CEBBC4F6A59A1689') { powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File $f } else { Write-Error 'install.ps1 nao confere - nada foi executado' }
+$f="$env:TEMP\wincare-install.ps1"; iwr https://wincare.joseok.cloud/install.ps1 -UseBasicParsing -OutFile $f; if ((Get-FileHash $f -Algorithm SHA256).Hash -eq 'CA1E97CF85331B6CC5158FF38379C31F609C7DB2F53D005E47D0A89C1B074F33') { powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File $f } else { Write-Error 'install.ps1 nao confere - nada foi executado' }
 ```
 
 Os dois só executam o `install.ps1` da versão se o SHA-256 conferir. Ele baixa o pacote do GitHub Releases e verifica a assinatura RSA do manifesto (chave fixada), o hash do zip e o de cada arquivo antes de abrir. Como administrador, a cópia verificada fica em `Program Files\WinCare`. Na interface, **Executar como administrador** reabre pelo mesmo caminho verificado.
@@ -34,6 +34,10 @@ Os dois só executam o `install.ps1` da versão se o SHA-256 conferir. Ele baixa
 | Office (F4): detecção, suplementos, tempo de abertura do Word (normal × modo seguro), reparo oficial | Testado com mocks + CI sem Office |
 | Políticas: 4 perfis, catálogo de ações em lista permitida, recursos protegidos bloqueados | Testado |
 | Distribuição: release com manifesto assinado (RSA-3072), `irm \| iex`, comando verificado, elevação segura, assinatura pela PKI da organização | Testado; `AllSigned` validado no CI |
+| Processos e memória: pressão de memória, maiores consumidores, suspeita de vazamento, programas em segundo plano (assinatura/local), CPU agora; encerrar processo com proteção a sistema e segurança | Testado no CI (Windows real) |
+| Saúde do sistema: eventos críticos (telas azuis, desligamentos, disco, WHEA), falhas de apps, drivers com problema, saúde dos discos, tarefas/serviços de inicialização de terceiros, bateria, Windows Update (leitura) | Testado no CI; bateria só com mocks |
+| Aplicativos e reparos: programas instalados, desinstaladores quebrados, atualizações via winget (só as selecionadas), apps da Store com problema | Testado no CI (leitura); atualizar/redefinir não roda no CI |
+| Rede: adaptadores, conectividade (gateway, DNS, HTTP/HTTPS), proxy, VPN; limpar cache DNS, renovar IP, redefinir Winsock (com confirmação; bloqueados em máquina gerenciada) | Testado no CI; só o cache DNS é alterado no CI |
 | F5: comparação antes/depois e ponto de restauração (só se a Proteção do Sistema já estiver ligada) | Testado (lógica + CI); criação real de ponto pendente em Windows cliente |
 
 ## Testes
