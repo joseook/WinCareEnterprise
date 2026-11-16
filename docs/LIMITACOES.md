@@ -23,10 +23,13 @@ Pelo CI (GitHub Actions `windows-latest`, Windows PowerShell 5.1.26100 Desktop, 
 - CPU por processo é tempo acumulado, não % atual.
 - Inicialização lista chaves Run e pastas; tarefas agendadas e serviços ainda não.
 - Sinais de gerenciamento podem falhar (GPO local sem chaves em `Policies\Microsoft`); por isso o perfil Corporativo bloqueia ações sensíveis mesmo sem detecção.
-- Limpeza de temporários, reparos SFC/DISM e ReTrim **não têm desfazer**. A F5 adiciona ponto de restauração (só se a Proteção do Sistema já estiver ativa) e comparação antes/depois.
+- `TotalProcessorTime`/`Company` de processos protegidos não aparecem sem elevação.
+- Rollback (F5): só existe onde é viável — ponto de restauração do sistema antes de ações de risco alto (opcionalmente médio), e só se a Proteção do Sistema **já** estiver ligada. Limpeza de temporários, SFC/DISM e ReTrim não podem ser desfeitos. Windows Server não tem Restauração do Sistema. O Windows cria no máximo um ponto a cada 24 h (padrão): nesse caso o WinCare registra "não criado (recente)" e referencia o ponto existente. A detecção da Proteção do Sistema ainda não foi confirmada em Windows cliente.
+- Antes/depois: o espaço livre é da unidade inteira; outros programas podem alterá-lo durante a ação. A medida da pasta da ação mostra o efeito direto.
 - `irm | iex` confia no HTTPS do site + conta do GitHub; o comando verificado (hash no README) é o indicado para auditoria. Alguns EDRs alertam sobre o padrão `irm | iex`.
 - A chave privada RSA de release fica só na máquina do mantenedor (sem HSM). Perda ou vazamento exige nova chave e novo `install.ps1` (ver `SECURITY-NOTES.md`, T7).
 - Tema escuro: ComboBox evitado (template padrão do WPF não respeita fundo escuro); barras de rolagem e diálogos seguem o tema do sistema.
+- O kit inclui o Pester 5 (Apache-2.0) copiado da máquina de build para uso interno em laboratório; não é redistribuído no repositório (`tools/` está no `.gitignore`).
 
 ## Fora de escopo nesta fase
 Instalação de serviços, tarefas agendadas, alterações de registro fora das ações do catálogo, telemetria.

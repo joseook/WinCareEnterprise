@@ -19,6 +19,10 @@ $script:WcState = @{
     Strings  = @{}
     Language = 'pt-BR'
     Handlers = @{}
+    # F5: plan-level hooks provided by feature modules (WinCare.Baseline):
+    #   Measure      { param($Context) } -> metrics (generic: free bytes per fixed drive)
+    #   RestorePoint { param($Plan, $Item) } -> restore point outcome
+    PlanHooks = @{ Measure = $null; RestorePoint = $null }
 }
 
 $script:WcRiskOrder = @{ 'None' = 0; 'Low' = 1; 'Medium' = 2; 'High' = 3 }
@@ -26,6 +30,11 @@ $script:WcCategories = @('Diagnostics', 'Storage', 'Startup', 'Integrity', 'Proc
     'Office', 'Services', 'Network', 'Performance', 'Security', 'Reporting')
 # Fundamental protections. An action that declares it touches any of these is
 # rejected when the catalog is loaded - no profile can ever enable it.
+# Honest undo mechanism of an action (catalog field 'Reversibility', F5):
+#   ReadOnly     - does not modify the system; nothing to undo.
+#   None         - modifies and cannot be undone by WinCare (temp cleanup, SFC/DISM repair, ReTrim).
+#   RestorePoint - system-state change that a Windows System Restore point taken before it can revert.
+$script:WcReversibility = @('ReadOnly', 'None', 'RestorePoint')
 $script:WcProtectedFeatures = @('Defender', 'Firewall', 'BitLocker', 'WindowsUpdate', 'GroupPolicy',
     'MDM', 'EDR', 'VPN', 'Authentication', 'Inventory', 'ExecutionPolicy', 'UAC', 'SmartScreen')
 
@@ -311,15 +320,36 @@ function Register-WcActionHandler {
         catalog JSON can reference handlers but never carries code.
         Preview: returns what would happen (no side effects) - used by dry-run.
         Execute: performs the action. Both receive the context hashtable.
+        Measure (optional, F5): read-only, returns action-specific metrics
+        (New-WcMetric) taken before and after Execute (docs/CONTRATO-ACOES.md).
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)][ValidatePattern('^[A-Za-z][A-Za-z0-9\-]+$')][string] $Name,
         [Parameter(Mandatory = $true)][scriptblock] $Preview,
-        [Parameter(Mandatory = $true)][scriptblock] $Execute
+        [Parameter(Mandatory = $true)][scriptblock] $Execute,
+        [scriptblock] $Measure
     )
-    $script:WcState.Handlers[$Name] = @{ Preview = $Preview; Execute = $Execute }
+    $script:WcState.Handlers[$Name] = @{ Preview = $Preview; Execute = $Execute; Measure = $Measure }
 }
+
+function Register-WcPlanHook {
+    <#
+        F5 plan-level hooks, set by a feature module from its Register-Wc*Handler:
+          Measure      { param($Context) }       generic before/after metrics (all actions)
+          RestorePoint { param($Plan, $Item) }   creates/skips a restore point; returns an outcome
+        Core stays platform-independent: without hooks there is no generic
+        measurement and restore points are reported as Unavailable.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][ValidateSet('Measure', 'RestorePoint')][string] $Name,
+        [scriptblock] $ScriptBlock
+    )
+    $script:WcState.PlanHooks[$Name] = $ScriptBlock
+}
+
+function Clear-WcPlanHooks { $script:WcState.PlanHooks = @{ Measure = $null; RestorePoint = $null } }
 
 function Get-WcActionHandlerNames { return @($script:WcState.Handlers.Keys) }
 
@@ -344,7 +374,7 @@ function Test-WcActionDefinition {
     [CmdletBinding()]
     param([Parameter(Mandatory = $true)][hashtable] $Action)
     $errors = @()
-    foreach ($req in @('Id', 'Category', 'Risk', 'Modifies', 'RequiresAdmin', 'Reversible', 'Handler', 'TitleKey')) {
+    foreach ($req in @('Id', 'Category', 'Risk', 'Modifies', 'RequiresAdmin', 'Reversible', 'Reversibility', 'Handler', 'TitleKey')) {
         if (-not $Action.ContainsKey($req)) { $errors += "missing field '$req'" }
     }
     if ($errors.Count -gt 0) { return $errors }
@@ -355,6 +385,14 @@ function Test-WcActionDefinition {
         if ($Action[$b] -isnot [bool]) { $errors += "field '$b' must be boolean" }
     }
     if ($Action.Modifies -eq $true -and [string]$Action.Risk -eq 'None') { $errors += 'modifying action cannot have risk None' }
+    $rev = [string]$Action.Reversibility
+    if ($script:WcReversibility -notcontains $rev) { $errors += "invalid reversibility '$rev'" }
+    elseif ($Action.Modifies -is [bool]) {
+        if (-not $Action.Modifies -and $rev -ne 'ReadOnly') { $errors += "read-only action must have reversibility 'ReadOnly'" }
+        if ($Action.Modifies -and $rev -eq 'ReadOnly') { $errors += "modifying action cannot have reversibility 'ReadOnly'" }
+        if ($Action.Modifies -and $rev -eq 'None' -and $Action.Reversible -eq $true) { $errors += "reversibility 'None' contradicts Reversible=true" }
+        if ($rev -eq 'RestorePoint' -and @('Medium', 'High') -notcontains [string]$Action.Risk) { $errors += "reversibility 'RestorePoint' requires risk Medium or High" }
+    }
     if ($Action.ContainsKey('Touches')) {
         foreach ($t in @($Action.Touches)) {
             if ($script:WcProtectedFeatures -contains $t) { $errors += "touches protected feature '$t'" }
@@ -486,6 +524,7 @@ function New-WcPlan {
             Risk                 = $a.Risk
             Modifies             = [bool]$a.Modifies
             Reversible           = [bool]$a.Reversible
+            Reversibility        = [string]$a.Reversibility
             RequiresConfirmation = ([bool]$a.Modifies -or [string]$a.Risk -ne 'None')
             Allowed              = $decision.Allowed
             Reasons              = $decision.Reasons
@@ -501,26 +540,231 @@ function New-WcPlan {
     }
 }
 
+# ------------------------------------------------- before/after (F5) --
+
+function New-WcMetric {
+    <# One measured value. Source: System (plan hook) | Action (handler Measure). Value: number or $null. #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string] $Name,
+        [string] $Target = '',
+        [string] $Unit = 'Bytes',
+        $Value = $null,
+        [ValidateSet('System', 'Action')][string] $Source = 'Action'
+    )
+    return [pscustomobject]@{ Source = $Source; Name = $Name; Target = $Target; Unit = $Unit; Value = $Value }
+}
+
+function ConvertTo-WcMetricList {
+    <# Pure: normalizes hook/handler output (metric objects or hashtables) and forces Source. #>
+    [CmdletBinding()]
+    param([object[]] $InputObject, [Parameter(Mandatory = $true)][ValidateSet('System', 'Action')][string] $Source)
+    $out = @()
+    $flat = @()
+    foreach ($m in @($InputObject)) {
+        # One level of nesting (a collector that returned ,@(...)) is flattened.
+        if ($m -is [System.Array]) { $flat += @($m) } else { $flat += , $m }
+    }
+    foreach ($m in $flat) {
+        if ($null -eq $m) { continue }
+        $h = $m
+        if ($m -isnot [System.Collections.IDictionary]) {
+            $h = @{}
+            foreach ($pr in $m.PSObject.Properties) { $h[$pr.Name] = $pr.Value }
+        }
+        if (-not $h.Contains('Name') -or -not $h['Name']) { continue }
+        $target = ''; if ($h.Contains('Target') -and $null -ne $h['Target']) { $target = [string]$h['Target'] }
+        $unit = 'Bytes'; if ($h.Contains('Unit') -and $h['Unit']) { $unit = [string]$h['Unit'] }
+        $value = $null; if ($h.Contains('Value')) { $value = $h['Value'] }
+        $out += New-WcMetric -Name ([string]$h['Name']) -Target $target -Unit $unit -Value $value -Source $Source
+    }
+    return $out
+}
+
+function Invoke-WcMeasurement {
+    <#
+        Takes one measurement: generic plan hook (System) + optional handler Measure (Action).
+        Never throws: a failing collector is recorded in Errors and the action still runs.
+    #>
+    [CmdletBinding()]
+    param([hashtable] $Context, [scriptblock] $ActionMeasure)
+    $metrics = @()
+    $errs = @()
+    $hook = $script:WcState.PlanHooks['Measure']
+    if ($hook) {
+        try { $metrics += @(ConvertTo-WcMetricList -InputObject @(& $hook $Context) -Source System) }
+        catch { $errs += ('system: ' + $_.Exception.Message) }
+    }
+    if ($ActionMeasure) {
+        try { $metrics += @(ConvertTo-WcMetricList -InputObject @(& $ActionMeasure $Context) -Source Action) }
+        catch { $errs += ('action: ' + $_.Exception.Message) }
+    }
+    return [pscustomobject]@{ Time = (Get-Date).ToUniversalTime().ToString('o'); Metrics = @($metrics); Errors = @($errs) }
+}
+
+function Test-WcNumber {
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param($Value)
+    if ($null -eq $Value) { return $false }
+    foreach ($t in @([int], [long], [double], [decimal], [single], [uint32], [uint64], [int16], [uint16], [byte])) {
+        if ($Value -is $t) { return $true }
+    }
+    return $false
+}
+
+function ConvertTo-WcComparison {
+    <#
+        Pure before/after comparison. Rows are matched by Source+Name+Target; Delta = After - Before
+        (positive free bytes = space gained; negative folder bytes = space removed).
+        FreeBytes* sum the System 'FreeBytes' rows present on both sides (drives that appeared or
+        vanished between the two measurements are listed but not summed).
+        Note: free space is system-wide; other processes can change it during the action.
+    #>
+    [CmdletBinding()]
+    param($Before, $After)
+    $order = New-Object System.Collections.Generic.List[string]
+    $map = @{}
+    foreach ($side in @('Before', 'After')) {
+        $m = $Before
+        if ($side -eq 'After') { $m = $After }
+        if ($null -eq $m) { continue }
+        foreach ($x in @($m.Metrics)) {
+            if ($null -eq $x) { continue }
+            $key = '{0}|{1}|{2}' -f $x.Source, $x.Name, $x.Target
+            if (-not $map.ContainsKey($key)) {
+                $map[$key] = [ordered]@{ Source = $x.Source; Name = $x.Name; Target = $x.Target; Unit = $x.Unit; Before = $null; After = $null; Delta = $null }
+                $order.Add($key)
+            }
+            $map[$key][$side] = $x.Value
+        }
+    }
+    $rows = @()
+    $fb = 0.0; $fa = 0.0; $drives = 0; $incomplete = 0
+    foreach ($k in $order) {
+        $r = $map[$k]
+        if ((Test-WcNumber $r.Before) -and (Test-WcNumber $r.After)) {
+            $d = [double]$r.After - [double]$r.Before
+            if ([math]::Floor($d) -eq $d -and [math]::Abs($d) -lt 9e15) { $r.Delta = [long]$d } else { $r.Delta = $d }
+            if ($r.Source -eq 'System' -and $r.Name -eq 'FreeBytes') { $fb += [double]$r.Before; $fa += [double]$r.After; $drives++ }
+        }
+        else { $incomplete++ }
+        $rows += [pscustomobject]$r
+    }
+    $errs = @()
+    foreach ($m in @($Before, $After)) {
+        if ($null -ne $m -and $m.PSObject.Properties['Errors']) { $errs += @($m.Errors) }
+    }
+    $freeBefore = $null; $freeAfter = $null; $freeDelta = $null
+    if ($drives -gt 0) { $freeBefore = [long]$fb; $freeAfter = [long]$fa; $freeDelta = [long]($fa - $fb) }
+    return [pscustomobject]@{
+        Rows = @($rows); FreeBytesBefore = $freeBefore; FreeBytesAfter = $freeAfter; FreeBytesDelta = $freeDelta
+        Complete = ($null -ne $Before -and $null -ne $After -and $incomplete -eq 0 -and $errs.Count -eq 0); Errors = @($errs)
+    }
+}
+
+function Test-WcRestorePointRequired {
+    <#
+        Pure: does this plan item need a System Restore point before it runs?
+        Policy Off = never; High = Risk High or Reversibility RestorePoint;
+        MediumAndHigh = also Risk Medium. Read-only items never need one.
+    #>
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param(
+        [Parameter(Mandatory = $true)] $Item,
+        [ValidateSet('Off', 'High', 'MediumAndHigh')][string] $Policy = 'High'
+    )
+    if ($Policy -eq 'Off' -or -not [bool]$Item.Modifies) { return $false }
+    $rev = ''
+    if ($Item.PSObject.Properties['Reversibility']) { $rev = [string]$Item.Reversibility }
+    if ($rev -eq 'RestorePoint') { return $true }
+    if ([string]$Item.Risk -eq 'High') { return $true }
+    if ([string]$Item.Risk -eq 'Medium' -and $Policy -eq 'MediumAndHigh') { return $true }
+    return $false
+}
+
+function New-WcRestorePointOutcome {
+    <#
+        Status: Created | Skipped | Unavailable | Failed.
+        Reason: created-recently, not-windows, powershell-edition, cmdlet-missing, requires-admin,
+        server-sku, disabled-by-policy, protection-disabled, no-provider, not-verified, error.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][ValidateSet('Created', 'Skipped', 'Unavailable', 'Failed')][string] $Status,
+        [string] $Reason = '',
+        $SequenceNumber = $null,
+        [string] $CreationTime = $null,
+        [string] $Description = $null,
+        [string] $Detail = $null
+    )
+    return [pscustomobject]@{ Status = $Status; Reason = $Reason; SequenceNumber = $SequenceNumber; CreationTime = $CreationTime; Description = $Description; Detail = $Detail }
+}
+
+function Test-WcRestorePointUsable {
+    <# Pure: true when the outcome gives a real rollback point (a new one, or a recent existing one). #>
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param($Outcome)
+    if ($null -eq $Outcome) { return $false }
+    if ($Outcome.Status -eq 'Created') { return $true }
+    return ($Outcome.Status -eq 'Skipped' -and $Outcome.Reason -eq 'created-recently' -and $null -ne $Outcome.SequenceNumber)
+}
+
+function Invoke-WcRestorePointHook {
+    <# Calls the RestorePoint hook; never throws (a failure becomes an outcome). #>
+    [CmdletBinding()]
+    param($Plan, $Item)
+    $hook = $script:WcState.PlanHooks['RestorePoint']
+    $outcome = $null
+    if (-not $hook) { $outcome = New-WcRestorePointOutcome -Status Unavailable -Reason 'no-provider' -Detail 'No restore point provider registered on this platform.' }
+    else {
+        try {
+            $outcome = @(& $hook $Plan $Item) | Select-Object -Last 1
+            if ($null -eq $outcome -or -not $outcome.PSObject.Properties['Status']) { $outcome = New-WcRestorePointOutcome -Status Failed -Reason 'error' -Detail 'Restore point provider returned no outcome.' }
+        }
+        catch { $outcome = New-WcRestorePointOutcome -Status Failed -Reason 'error' -Detail $_.Exception.Message }
+    }
+    Write-WcLog -Level Audit -Category 'RestorePoint' -Message ('Restore point for plan {0}: {1} {2}' -f $Plan.Id, $outcome.Status, $outcome.Reason) -Data @{ sequence = $outcome.SequenceNumber; detail = $outcome.Detail } | Out-Null
+    return $outcome
+}
+
 function Invoke-WcPlan {
     <#
         Runs a plan. -DryRun calls only the Preview of each handler, never Execute.
         Items that require confirmation run only if -ConfirmCallback returns $true.
         Every decision is written to the audit log.
+        F5 (never in DryRun):
+          * each executed item is measured before and after (-Measure All | Modifying | None)
+            and the result carries Before, After and Comparison (ConvertTo-WcComparison);
+          * before the first confirmed item that needs one (Test-WcRestorePointRequired with
+            -RestorePointPolicy) the RestorePoint hook runs ONCE per plan; the outcome is
+            attached to every item that needed it. With -RequireRestorePoint those items are
+            Skipped when no usable restore point exists. Nothing here enables System Protection.
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)][object] $Plan,
         [Parameter(Mandatory = $true)][hashtable] $Context,
         [switch] $DryRun,
-        [scriptblock] $ConfirmCallback
+        [scriptblock] $ConfirmCallback,
+        [ValidateSet('All', 'Modifying', 'None')][string] $Measure = 'All',
+        [ValidateSet('Off', 'High', 'MediumAndHigh')][string] $RestorePointPolicy = 'High',
+        [switch] $RequireRestorePoint
     )
     $results = @()
     $mode = 'Execute'
     if ($DryRun) { $mode = 'DryRun' }
+    $rpOutcome = $null
     Write-WcLog -Level Audit -Category 'Plan' -Message ("Plan {0} started ({1}, profile {2})." -f $Plan.Id, $mode, $Plan.Profile) | Out-Null
     foreach ($item in $Plan.Items) {
+        $rev = $null
+        if ($item.PSObject.Properties['Reversibility']) { $rev = $item.Reversibility }
         $r = [ordered]@{ ActionId = $item.ActionId; Mode = $mode; Status = ''; Output = $null; Error = $null
-            Started = (Get-Date).ToUniversalTime().ToString('o'); Finished = $null }
+            Started = (Get-Date).ToUniversalTime().ToString('o'); Finished = $null
+            Reversibility = $rev; RestorePoint = $null; Before = $null; After = $null; Comparison = $null
+        }
         if (-not $item.Allowed) {
             $r.Status = 'Blocked'
             $r.Error = ($item.Reasons -join ',')
@@ -538,9 +782,31 @@ function Invoke-WcPlan {
                         $confirmed = $false
                         if ($ConfirmCallback) { $confirmed = [bool](& $ConfirmCallback $item) }
                     }
-                    if ($confirmed) {
-                        $r.Output = & $handler.Execute $Context
-                        $r.Status = 'Succeeded'
+                    $run = $confirmed
+                    if ($confirmed -and (Test-WcRestorePointRequired -Item $item -Policy $RestorePointPolicy)) {
+                        if ($null -eq $rpOutcome) { $rpOutcome = Invoke-WcRestorePointHook -Plan $Plan -Item $item }
+                        $r.RestorePoint = $rpOutcome
+                        if ($RequireRestorePoint -and -not (Test-WcRestorePointUsable -Outcome $rpOutcome)) {
+                            $run = $false
+                            $r.Error = 'restorepoint.required-not-available'
+                        }
+                    }
+                    if ($run) {
+                        $doMeasure = ($Measure -eq 'All' -or ($Measure -eq 'Modifying' -and [bool]$item.Modifies))
+                        $actionMeasure = $null
+                        if ($handler.ContainsKey('Measure')) { $actionMeasure = $handler['Measure'] }
+                        if ($doMeasure) { $r.Before = Invoke-WcMeasurement -Context $Context -ActionMeasure $actionMeasure }
+                        try {
+                            $r.Output = & $handler.Execute $Context
+                            $r.Status = 'Succeeded'
+                        }
+                        finally {
+                            # Measured even when Execute fails: a partial run may have changed something.
+                            if ($doMeasure) {
+                                $r.After = Invoke-WcMeasurement -Context $Context -ActionMeasure $actionMeasure
+                                $r.Comparison = ConvertTo-WcComparison -Before $r.Before -After $r.After
+                            }
+                        }
                     }
                     else { $r.Status = 'Skipped' }
                 }
@@ -553,7 +819,10 @@ function Invoke-WcPlan {
         $r.Finished = (Get-Date).ToUniversalTime().ToString('o')
         $level = 'Audit'
         if ($r.Status -eq 'Failed') { $level = 'Error' }
-        Write-WcLog -Level $level -Category 'Plan' -Message ("{0}: {1}" -f $item.ActionId, $r.Status) -Data @{ plan = $Plan.Id; error = $r.Error } | Out-Null
+        $logData = @{ plan = $Plan.Id; error = $r.Error }
+        if ($null -ne $r.Comparison) { $logData['freeBytesDelta'] = $r.Comparison.FreeBytesDelta }
+        if ($null -ne $r.RestorePoint) { $logData['restorePoint'] = ('{0} {1}' -f $r.RestorePoint.Status, $r.RestorePoint.Reason).Trim() }
+        Write-WcLog -Level $level -Category 'Plan' -Message ("{0}: {1}" -f $item.ActionId, $r.Status) -Data $logData | Out-Null
         $results += [pscustomobject]$r
     }
     return $results
@@ -561,8 +830,55 @@ function Invoke-WcPlan {
 
 # ----------------------------------------------------------------- history --
 
+function Get-WcResultValue {
+    <# StrictMode-safe property read (old results and history rows may lack F5 fields). #>
+    [CmdletBinding()]
+    param($Object, [string] $Name)
+    if ($null -eq $Object) { return $null }
+    if ($Object -is [System.Collections.IDictionary]) {
+        if ($Object.Contains($Name)) { return $Object[$Name] }
+        return $null
+    }
+    $p = $Object.PSObject.Properties[$Name]
+    if ($p) { return $p.Value }
+    return $null
+}
+
+function ConvertTo-WcHistoryEntry {
+    <# Pure: one plan result -> the flat record written to history (also the action report row). #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory = $true)] $Plan, [Parameter(Mandatory = $true)] $Result)
+    $o = Get-WcResultValue $Result 'Output'
+    $summary = $null; $before = $null; $after = $null; $freed = $null; $exit = $null; $rollbackData = $false
+    if ($o -and $o.PSObject.Properties['Summary']) {
+        $summary = $o.Summary; $before = $o.BytesBefore; $after = $o.BytesAfter; $freed = $o.BytesFreed; $exit = $o.ExitCode
+        $rollbackData = ($null -ne $o.RollbackData)
+    }
+    $cmp = Get-WcResultValue $Result 'Comparison'
+    $rows = $null; $freeDelta = $null; $mErrors = $null
+    if ($null -ne $cmp) {
+        $rows = @(foreach ($x in @($cmp.Rows)) { [ordered]@{ source = $x.Source; name = $x.Name; target = $x.Target; unit = $x.Unit; before = $x.Before; after = $x.After; delta = $x.Delta } })
+        $freeDelta = $cmp.FreeBytesDelta
+        $mErrors = @($cmp.Errors)
+    }
+    $rp = Get-WcResultValue $Result 'RestorePoint'
+    $rpEntry = $null
+    if ($null -ne $rp) {
+        $rpEntry = [ordered]@{ status = $rp.Status; reason = $rp.Reason; sequenceNumber = $rp.SequenceNumber; creationTime = $rp.CreationTime; description = $rp.Description; detail = $rp.Detail }
+    }
+    return [ordered]@{
+        time = (Get-Date).ToUniversalTime().ToString('o'); plan = $Plan.Id; profile = $Plan.Profile; computer = [System.Environment]::MachineName
+        action = (Get-WcResultValue $Result 'ActionId'); mode = (Get-WcResultValue $Result 'Mode'); status = (Get-WcResultValue $Result 'Status')
+        summary = $summary; error = (Get-WcResultValue $Result 'Error')
+        bytesBefore = $before; bytesAfter = $after; bytesFreed = $freed; exitCode = $exit
+        rollbackAvailable = ($rollbackData -or (Test-WcRestorePointUsable -Outcome $rp))
+        reversibility = (Get-WcResultValue $Result 'Reversibility'); restorePoint = $rpEntry
+        freeBytesDelta = $freeDelta; comparison = $rows; measurementErrors = $mErrors
+    }
+}
+
 function Add-WcHistory {
-    <# Appends one JSON line per plan item to <Directory>/actions-YYYYMM.jsonl (local audit trail, before/after). #>
+    <# Appends one JSON line per plan item to <Directory>/actions-YYYYMM.jsonl (audit trail: before/after, restore point). #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)][string] $Directory,
@@ -574,18 +890,8 @@ function Add-WcHistory {
     $n = 0
     foreach ($r in @($Results)) {
         if ($null -eq $r) { continue }
-        $o = $r.Output
-        $summary = $null; $before = $null; $after = $null; $freed = $null; $exit = $null; $rollback = $false
-        if ($o -and $o.PSObject.Properties['Summary']) {
-            $summary = $o.Summary; $before = $o.BytesBefore; $after = $o.BytesAfter; $freed = $o.BytesFreed; $exit = $o.ExitCode
-            $rollback = ($null -ne $o.RollbackData)
-        }
-        $entry = [ordered]@{
-            time = (Get-Date).ToUniversalTime().ToString('o'); plan = $Plan.Id; profile = $Plan.Profile; computer = [System.Environment]::MachineName
-            action = $r.ActionId; mode = $r.Mode; status = $r.Status; summary = $summary; error = $r.Error
-            bytesBefore = $before; bytesAfter = $after; bytesFreed = $freed; exitCode = $exit; rollbackAvailable = $rollback
-        }
-        [System.IO.File]::AppendAllText($file, (ConvertTo-Json -InputObject $entry -Compress -Depth 4) + "`n", (New-Object System.Text.UTF8Encoding($false)))
+        $entry = ConvertTo-WcHistoryEntry -Plan $Plan -Result $r
+        [System.IO.File]::AppendAllText($file, (ConvertTo-Json -InputObject $entry -Compress -Depth 6) + "`n", (New-Object System.Text.UTF8Encoding($false)))
         $n++
     }
     return $n
@@ -639,5 +945,8 @@ Export-ModuleMember -Function @(
     'Get-WcDefaultSettings', 'Test-WcSettings', 'Read-WcSettings', 'Save-WcSettings',
     'Get-WcProfile', 'Register-WcActionHandler', 'Get-WcActionHandlerNames', 'Initialize-WcActionHandlers', 'Clear-WcActionHandlers',
     'Test-WcActionDefinition', 'Import-WcActionCatalog', 'New-WcActionResult', 'New-WcContext', 'Test-WcActionAllowed',
-    'New-WcPlan', 'Invoke-WcPlan', 'Add-WcHistory', 'Read-WcHistory', 'Test-WcPathWithin', 'Test-WcDriveLetter'
+    'New-WcPlan', 'Invoke-WcPlan', 'Add-WcHistory', 'Read-WcHistory',
+    'Register-WcPlanHook', 'Clear-WcPlanHooks', 'New-WcMetric', 'ConvertTo-WcMetricList', 'Invoke-WcMeasurement', 'ConvertTo-WcComparison',
+    'Test-WcRestorePointRequired', 'New-WcRestorePointOutcome', 'Test-WcRestorePointUsable', 'Invoke-WcRestorePointHook',
+    'Get-WcResultValue', 'ConvertTo-WcHistoryEntry', 'Test-WcNumber', 'Test-WcPathWithin', 'Test-WcDriveLetter'
 )

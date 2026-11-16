@@ -5,7 +5,7 @@
 $script:RepoRoot = Split-Path -Parent $PSScriptRoot
 $script:SrcRoot = Join-Path $script:RepoRoot 'src'
 
-foreach ($name in @('Get-CimInstance', 'Get-MpComputerStatus', 'Get-NetFirewallProfile', 'Get-AuthenticodeSignature', 'Test-FileCatalog')) {
+foreach ($name in @('Get-CimInstance', 'Get-MpComputerStatus', 'Get-NetFirewallProfile', 'Get-AuthenticodeSignature', 'Test-FileCatalog', 'Checkpoint-Computer', 'Get-ComputerRestorePoint')) {
     if (-not (Get-Command -Name $name -ErrorAction SilentlyContinue)) {
         $body = "[CmdletBinding()] param([Parameter(ValueFromRemainingArguments = `$true)] `$Rest) throw 'Stub for $name was called without a mock.'"
         Set-Item -Path ("function:global:$name") -Value ([scriptblock]::Create($body))

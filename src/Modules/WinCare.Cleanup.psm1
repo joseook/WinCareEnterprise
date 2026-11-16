@@ -123,6 +123,33 @@ function Get-WcTempCleanupScan {
     return [pscustomobject]@{ Root = $root; Candidates = $cands; TotalBytes = $total; DeniedFolders = $walk.DeniedFolders }
 }
 
+function Measure-WcTempFolder {
+    <#
+        F5 action-specific measurement (handler -Measure): total bytes and file count of the
+        cleanup root (all files, any age; reparse points never followed). Read-only.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory = $true)][ValidateSet('User', 'Windows')][string] $Scope)
+    $root = Get-WcTempRoot -Scope $Scope
+    $walk = Get-WcTempFileEntry -Root $root
+    return (ConvertTo-WcFolderMetric -Entry $walk.Entries -Root $root)
+}
+
+function ConvertTo-WcFolderMetric {
+    <# Pure: walked entries -> FolderBytes + FileCount metrics for Root (reparse files not counted). #>
+    [CmdletBinding()]
+    param([object[]] $Entry, [Parameter(Mandatory = $true)][string] $Root)
+    $bytes = 0L; $count = 0
+    foreach ($e in @($Entry)) {
+        if ($null -eq $e -or $e.IsReparsePoint) { continue }
+        $bytes += [long]$e.Length; $count++
+    }
+    return @(
+        (New-WcMetric -Source Action -Name 'FolderBytes' -Target $Root -Unit 'Bytes' -Value $bytes),
+        (New-WcMetric -Source Action -Name 'FileCount' -Target $Root -Unit 'Count' -Value $count)
+    )
+}
+
 # -------------------------------------------------------------- deletion --
 
 function Test-WcSafeDeletePath {
@@ -266,14 +293,14 @@ function Register-WcCleanupHandler {
     <# Called lazily by Core (Initialize-WcActionHandlers): Core is not visible while the manifest is still importing. #>
     [CmdletBinding()]
     param()
-    Register-WcActionHandler -Name 'Cleanup-UserTemp' -Preview { param($Context) Invoke-WcTempCleanup -Scope User } -Execute { param($Context) Invoke-WcTempCleanup -Scope User -Execute }
-    Register-WcActionHandler -Name 'Cleanup-WindowsTemp' -Preview { param($Context) Invoke-WcTempCleanup -Scope Windows } -Execute { param($Context) Invoke-WcTempCleanup -Scope Windows -Execute }
+    Register-WcActionHandler -Name 'Cleanup-UserTemp' -Preview { param($Context) Invoke-WcTempCleanup -Scope User } -Execute { param($Context) Invoke-WcTempCleanup -Scope User -Execute } -Measure { param($Context) Measure-WcTempFolder -Scope User }
+    Register-WcActionHandler -Name 'Cleanup-WindowsTemp' -Preview { param($Context) Invoke-WcTempCleanup -Scope Windows } -Execute { param($Context) Invoke-WcTempCleanup -Scope Windows -Execute } -Measure { param($Context) Measure-WcTempFolder -Scope Windows }
     Register-WcActionHandler -Name 'Storage-OptimizeAnalyze' -Preview { param($Context) Invoke-WcOptimizeAction -Mode Analyze } -Execute { param($Context) Invoke-WcOptimizeAction -Mode Analyze -Execute }
     Register-WcActionHandler -Name 'Storage-OptimizeRetrim' -Preview { param($Context) Invoke-WcOptimizeAction -Mode ReTrim } -Execute { param($Context) Invoke-WcOptimizeAction -Mode ReTrim -Execute }
 }
 
 Export-ModuleMember -Function @('Register-WcCleanupHandler', 
     'Test-WcTempRootSafe', 'Get-WcTempRoot', 'Get-WcTempFileEntry', 'ConvertTo-WcTempCandidate', 'Get-WcTempCleanupScan',
-    'Test-WcSafeDeletePath', 'Remove-WcTempFile', 'Invoke-WcTempCleanup',
+    'Test-WcSafeDeletePath', 'Remove-WcTempFile', 'Invoke-WcTempCleanup', 'Measure-WcTempFolder', 'ConvertTo-WcFolderMetric',
     'Get-WcOptimizeDriveLetter', 'Invoke-WcOptimizeVolume', 'Get-WcSystemVolumeMedia', 'Invoke-WcOptimizeAction'
 )
