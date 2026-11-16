@@ -19,16 +19,16 @@ ol{padding-left:20px}code{font-family:Consolas,monospace}a{color:var(--accent)}
 </head>
 <body><main>
 <h1>WinCare Enterprise</h1>
-<p>Diagnóstico e manutenção do Windows para técnicos. Versão 0.2.0. Open source (MIT).</p>
+<p>Diagnóstico e manutenção do Windows para técnicos. Versão 0.2.1. Open source (MIT).</p>
 <div class="card">
 <strong>Rápido: abra o PowerShell (como administrador, para aplicar otimizações) e cole</strong>
 <pre id="cmd-short">irm https://wincare.joseok.cloud/run | iex</pre>
 <button type="button" class="copy" data-target="cmd-short">Copiar comando</button>
-<p>O <a href="https://wincare.joseok.cloud/run.ps1">script <code>run</code></a> é curto, legível e não executa nada além do <code>install.ps1</code> desta versão, conferido pelo SHA-256 <code>EB71A4DD71F0E80DE7D2574806FA06982119AD1988342A266D744D52917AE841</code>.</p>
+<p>O <a href="https://wincare.joseok.cloud/run.ps1">script <code>run</code></a> é curto, legível e não executa nada além do <code>install.ps1</code> desta versão, conferido pelo SHA-256 <code>91A17278E24A87F74C1BD1AFF637615625C45F76BF8D69F4CEBBC4F6A59A1689</code>.</p>
 </div>
 <div class="card">
 <strong>Verificado: o hash fica do seu lado (auditoria, usuário sem privilégio)</strong>
-<pre id="cmd">$f=&quot;$env:TEMP\wincare-install.ps1&quot;; iwr https://wincare.joseok.cloud/install.ps1 -UseBasicParsing -OutFile $f; if ((Get-FileHash $f -Algorithm SHA256).Hash -eq &#39;EB71A4DD71F0E80DE7D2574806FA06982119AD1988342A266D744D52917AE841&#39;) { powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File $f } else { Write-Error &#39;install.ps1 nao confere - nada foi executado&#39; }</pre>
+<pre id="cmd">$f=&quot;$env:TEMP\wincare-install.ps1&quot;; iwr https://wincare.joseok.cloud/install.ps1 -UseBasicParsing -OutFile $f; if ((Get-FileHash $f -Algorithm SHA256).Hash -eq &#39;91A17278E24A87F74C1BD1AFF637615625C45F76BF8D69F4CEBBC4F6A59A1689&#39;) { powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File $f } else { Write-Error &#39;install.ps1 nao confere - nada foi executado&#39; }</pre>
 <button type="button" class="copy" data-target="cmd">Copiar comando</button>
 </div>
 <div class="card">
@@ -39,7 +39,7 @@ ol{padding-left:20px}code{font-family:Consolas,monospace}a{color:var(--accent)}
 <li>Abrir o WinCare não altera nada. Cada ação mostra a prévia e pede confirmação.</li>
 </ol>
 <p>Usa <code>-ExecutionPolicy RemoteSigned</code> só no processo, sem <code>Bypass</code>: políticas de grupo, AppLocker e WDAC continuam valendo. Em máquinas corporativas com <code>AllSigned</code> ou AppLocker, veja o <a href="https://github.com/joseook/WinCareEnterprise/blob/main/docs/CORPORATIVO.md">guia corporativo</a>.</p>
-<p>Código e comandos no <a href="https://github.com/joseook/WinCareEnterprise#readme">GitHub</a>. SHA-256 do pacote 0.2.0: <code>276A7BC7D12642684C19EAEFBC015739B8BC79C9B6A05277F3187B0D9E3F3585</code>.</p>
+<p>Código e comandos no <a href="https://github.com/joseook/WinCareEnterprise#readme">GitHub</a>. SHA-256 do pacote 0.2.1: <code>794A1029360D599DD4C22B319C3E699E484AB98E364936D0BB71065D022EDE74</code>.</p>
 </div>
 </main>
 <script>
