@@ -58,7 +58,15 @@ function Get-WcOrgFileHash {
     <# SHA-256 with retries: antivirus often holds freshly copied files for a moment. #>
     param([string] $Path)
     for ($i = 1; $i -le 10; $i++) {
-        try { return (Get-FileHash -LiteralPath $Path -Algorithm SHA256 -ErrorAction Stop).Hash }
+        try {
+            # FileShare ReadWrite+Delete: Get-FileHash (PS 5.1) opens with FileShare.Read and fails
+            # when another process (e.g. antivirus) holds the file with write access.
+            $share = [System.IO.FileShare]::ReadWrite -bor [System.IO.FileShare]::Delete
+            $fs = New-Object System.IO.FileStream($Path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, $share)
+            $sha = [System.Security.Cryptography.SHA256]::Create()
+            try { return ([System.BitConverter]::ToString($sha.ComputeHash($fs))).Replace('-', '') }
+            finally { $sha.Dispose(); $fs.Dispose() }
+        }
         catch {
             if ($i -eq 10) { throw }
             Start-Sleep -Milliseconds (300 * $i)
