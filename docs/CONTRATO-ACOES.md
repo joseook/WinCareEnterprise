@@ -94,3 +94,41 @@ Regras:
 - Linhas já formatadas para exibição (bytes legíveis, datas locais curtas). Valores numéricos para ordenação podem ir numa coluna extra cujo nome termina em `Raw` (a interface a esconde).
 - Toda coluna `X` precisa de `col.X` nos dois idiomas (fragmento do módulo).
 - As ações da área vão no catálogo com `"Pages": ["<página>"]` e aparecem embaixo das seções, com prévia e confirmação como nas demais.
+- Seção só com nota é permitida (`Rows = @()` + `NoteKey`), ex.: `no-ram-cleaner` na página de processos.
+
+### 6.1 Parâmetros de ação vindos da seleção na interface
+
+Ações que agem sobre um item escolhido numa tabela (hoje só `process.end`) recebem a escolha **no contexto**, não no catálogo:
+
+```powershell
+$ctx = New-WcContext -IsAdmin ... -Build ...
+$ctx.Parameters = @{ 'process.end' = @{ ProcessId = 1234; ProcessName = 'notepad'; Force = $false } }
+# equivalente: Set-WcProcessEndRequest -Context $ctx -ProcessId 1234 -ProcessName 'notepad' [-Force]
+```
+
+- Chave = id da ação; valores simples (número, texto, booleano). Nada vira comando ou argumento livre. `Force` só conta se for booleano `$true`.
+- `ProcessId` e `ProcessName` vêm das colunas `ProcPid` e `Name` da linha selecionada. O nome protege contra reuso de PID entre a prévia e a execução (`pid-mismatch`).
+- Fluxo da interface: seleção → `Set-WcProcessEndRequest` → `New-WcPlan` + `Invoke-WcPlan -DryRun` (prévia: o que seria encerrado e quanta memória usa) → diálogo de confirmação com duas escolhas, **Fechar** (padrão) e **Forçar encerramento** (avisa que o que não foi salvo se perde) → se o usuário escolher forçar, `Set-WcProcessEndRequest ... -Force` **antes** de `Invoke-WcPlan -ConfirmCallback`. Sem `Force`, um processo que não fecha sozinho termina como `Failed` ("not forced"); nunca é morto.
+- O handler relê o processo e reaplica a lista de bloqueio na execução; recusa vira `Failed` com os códigos (texto em `processes.refuse.<código>`). Tudo vai para o log de auditoria (categoria `Processes`).
+
+### 6.2 Página `processes` (`WinCare.Processes`)
+
+`Get-WcProcessesPageData [-TopCount 25] [-SampleCount 3] [-SampleIntervalSeconds 3] [-GrowthTopCount 15] [-SignatureCheckCount 25] [-CpuTopCount 10]` leva cerca de `SampleCount × SampleIntervalSeconds` s (padrão ~6 s); a mesma amostragem alimenta crescimento, CPU e falhas de página.
+
+| Seção | Colunas |
+|---|---|
+| `memory-overview` | `Metric`, `Value`, `Status`, `ProcThreshold`, `ProcStatusRaw` |
+| `top-memory` | `Name`, `ProcPid`, `ProcWorkingSet`, `ProcPrivate`, `Description`, `Company`, `Path`, `ProcKind`, `ProcServices`, `ProcWorkingSetRaw`, `ProcPrivateRaw` |
+| `growth` | `Name`, `ProcPid`, `ProcSamples`, `ProcGrowth`, `Status`, `ProcStatusRaw`, `ProcGrowthRaw` |
+| `review` | `Name`, `ProcPid`, `ProcInstances`, `Path`, `ProcLocation`, `ProcSignature`, `ProcSigner`, `ProcKind`, `ProcSignatureRaw` |
+| `cpu-now` | `Name`, `ProcPid`, `ProcCpuPercent`, `CpuSecondsTotal`, `ProcCpuPercentRaw` |
+| `no-ram-cleaner` | só nota (`processes.note.no-ram-cleaner`) |
+
+`ProcStatusRaw` (`Ok/Pressure/Critical/Info/Unknown/Growing/Stable`) e `ProcSignatureRaw` (status do Authenticode ou `NotChecked`) são códigos para a interface colorir/filtrar; ficam escondidos como as demais colunas `Raw`.
+
+Limites (`Get-WcProcessesThreshold`): memória disponível < 15 % = pressão, < 5 % = crítico; carga de confirmação ≥ 80 % do limite = pressão, ≥ 95 % = crítico; arquivo de paginação ≥ 80 % = pressão; `Memory\Pages Input/sec` ≥ 1000/s = pressão (amostra curta); crescimento = bytes privados sobem em **todas** as amostras, ≥ 10 MB e ≥ 5 % (heurística, não prova). A assinatura é verificada (com cache) só em executáveis fora de `%SystemRoot%`, primeiro os de pastas graváveis, até `SignatureCheckCount`. A linha de comando dos processos nunca entra nas linhas (pode conter segredos).
+
+Ações (`actions.d/f6-processes.json`):
+- `process.end` — Medium, modifica, `Reversibility: None` (só perfil Avançado). Um PID por vez. Recusa (listas no topo do módulo): PID 0/4; processos essenciais (System, Idle, Registry, smss, csrss, wininit, winlogon, services, lsass, svchost, dwm, fontdrvhost, explorer…); segurança/EDR/VPN/gerenciamento (Defender e Defender for Endpoint, Intune, ConfigMgr, CrowdStrike, SentinelOne, Sophos, Cisco Secure Client, GlobalProtect, FortiClient, Zscaler, OpenVPN, WireGuard… por nome, empresa do arquivo ou pasta do Defender) — nem administrador libera; quem hospeda serviços; contas do sistema; sessão 0 (quando o WinCare não roda na sessão 0); o próprio WinCare; processo de outro usuário ou de dono desconhecido sem administrador. Primeiro `CloseMainWindow` (espera 10 s); `Stop-Process` só com `Force`. `Measure`: `ProcessRunning` e `ProcessWorkingSet` do PID.
+- `memory.schedule-diagnostic` — Low. Não há opção documentada do `MdSched.exe` para agendar sem janela, então a ação **abre** o Diagnóstico de Memória do Windows (pode pedir UAC) e o usuário escolhe "reiniciar agora" ou "na próxima inicialização". O WinCare nunca reinicia o computador.
+- Não há "limpador de RAM" (EmptyWorkingSet, esvaziar a lista de espera): é placebo ou piora (o Windows relê do disco o que foi descartado). Explicação em `processes.note.no-ram-cleaner`.
