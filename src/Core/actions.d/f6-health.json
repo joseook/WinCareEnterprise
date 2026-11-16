@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "comment": "Phase F6 - System health page (module WinCare.Health). All read-only: no action clears event logs, disables tasks or services, changes drivers or touches Windows Update. Reports are written only to the WinCare reports folder.",
+  "actions": [
+    { "Id": "health.battery-report", "Category": "Diagnostics", "Risk": "None", "Modifies": false, "RequiresAdmin": false, "Reversible": true, "Reversibility": "ReadOnly",
+      "RequiresWindows": true, "BlockedWhenManaged": false, "MinBuild": 10240, "Editions": null, "Pages": ["health"],
+      "Handler": "Health-BatteryReport", "TitleKey": "action.health.battery-report", "DescriptionKey": "action.health.battery-report.desc" },
+    { "Id": "health.energy-report", "Category": "Diagnostics", "Risk": "None", "Modifies": false, "RequiresAdmin": true, "Reversible": true, "Reversibility": "ReadOnly",
+      "RequiresWindows": true, "BlockedWhenManaged": false, "MinBuild": 10240, "Editions": null, "Pages": ["health"],
+      "Handler": "Health-EnergyReport", "TitleKey": "action.health.energy-report", "DescriptionKey": "action.health.energy-report.desc" },
+    { "Id": "health.reliability-open", "Category": "Diagnostics", "Risk": "None", "Modifies": false, "RequiresAdmin": false, "Reversible": true, "Reversibility": "ReadOnly",
+      "RequiresWindows": true, "BlockedWhenManaged": false, "MinBuild": 10240, "Editions": null, "Pages": ["health"],
+      "Handler": "Health-ReliabilityOpen", "TitleKey": "action.health.reliability-open", "DescriptionKey": "action.health.reliability-open.desc" },
+    { "Id": "health.export-events", "Category": "Diagnostics", "Risk": "None", "Modifies": false, "RequiresAdmin": false, "Reversible": true, "Reversibility": "ReadOnly",
+      "RequiresWindows": true, "BlockedWhenManaged": false, "MinBuild": 10240, "Editions": null, "Pages": ["health"],
+      "Handler": "Health-ExportEvents", "TitleKey": "action.health.export-events", "DescriptionKey": "action.health.export-events.desc" }
+  ]
+}
