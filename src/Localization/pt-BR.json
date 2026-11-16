@@ -96,7 +96,7 @@
   "settings.theme-light": "Claro",
   "settings.language": "Idioma",
   "settings.profile": "Perfil de operação",
-  "settings.profile-note": "Nenhum perfil desativa Defender, Firewall, BitLocker, Windows Update, GPO, MDM, EDR, VPN ou autenticação. Nesta versão só existem ações de leitura.",
+  "settings.profile-note": "Nenhum perfil desativa Defender, Firewall, BitLocker, Windows Update, GPO, MDM, EDR, VPN ou autenticação. Toda ação que altera o sistema mostra a prévia e pede confirmação.",
   "settings.about": "Sobre",
   "settings.about-text": "WinCare Enterprise {0}\nAplicação: {1}\nDados e logs: {2}\nPowerShell: {3}\nLicença MIT.",
   "profile.Diagnostico": "Diagnóstico",

@@ -96,7 +96,7 @@
   "settings.theme-light": "Light",
   "settings.language": "Language",
   "settings.profile": "Operation profile",
-  "settings.profile-note": "No profile disables Defender, Firewall, BitLocker, Windows Update, GPO, MDM, EDR, VPN or authentication. This version only has read actions.",
+  "settings.profile-note": "No profile disables Defender, Firewall, BitLocker, Windows Update, GPO, MDM, EDR, VPN or authentication. Every action that changes the system shows a preview and asks for confirmation.",
   "settings.about": "About",
   "settings.about-text": "WinCare Enterprise {0}\nApplication: {1}\nData and logs: {2}\nPowerShell: {3}\nMIT license.",
   "profile.Diagnostico": "Diagnostics",
