@@ -1,0 +1,6 @@
+
+Configurações atuais de proxy do WinHTTP:
+
+    Servidor(es) proxy:  proxy.corp.example:3128
+    Lista de desvio   :  (nenhum)
+

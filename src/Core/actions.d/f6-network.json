@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "comment": "Phase F6 - page 'network' (module WinCare.Network). Never touches firewall rules, VPN profiles, proxy settings, DNS server settings or adapter enable state. reset-winsock needs a restart; the handler never restarts.",
+  "actions": [
+    { "Id": "network.flush-dns", "Category": "Network", "Risk": "Low", "Modifies": true, "RequiresAdmin": false, "Reversible": false, "Reversibility": "None",
+      "RequiresWindows": true, "BlockedWhenManaged": false, "MinBuild": 10240, "Editions": null, "Pages": ["network"], "Touches": ["DnsClientCache"],
+      "Handler": "Network-FlushDns", "TitleKey": "action.network.flush-dns", "DescriptionKey": "action.network.flush-dns.desc" },
+    { "Id": "network.renew-ip", "Category": "Network", "Risk": "Medium", "Modifies": true, "RequiresAdmin": true, "Reversible": false, "Reversibility": "None",
+      "RequiresWindows": true, "BlockedWhenManaged": true, "MinBuild": 10240, "Editions": null, "Pages": ["network"], "Touches": ["DhcpLease"],
+      "Handler": "Network-RenewIp", "TitleKey": "action.network.renew-ip", "DescriptionKey": "action.network.renew-ip.desc" },
+    { "Id": "network.reset-winsock", "Category": "Network", "Risk": "High", "Modifies": true, "RequiresAdmin": true, "Reversible": false, "Reversibility": "RestorePoint",
+      "RequiresWindows": true, "BlockedWhenManaged": true, "MinBuild": 10240, "Editions": null, "Pages": ["network"], "Touches": ["WinsockCatalog"],
+      "Handler": "Network-ResetWinsock", "TitleKey": "action.network.reset-winsock", "DescriptionKey": "action.network.reset-winsock.desc" }
+  ]
+}
