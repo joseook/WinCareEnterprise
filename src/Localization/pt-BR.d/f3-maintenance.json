@@ -6,7 +6,7 @@
   "action.storage.optimize-analyze": "Analisar otimização da unidade do sistema",
   "action.storage.optimize-analyze.desc": "Executa Optimize-Volume -Analyze na unidade do sistema e mostra o relatório. Somente leitura. Exige administrador.",
   "action.storage.optimize-retrim": "Executar TRIM na unidade do sistema (SSD)",
-  "action.storage.optimize-retrim.desc": "Executa Optimize-Volume -ReTrim somente se a unidade do sistema for SSD. Em HDD ou mídia desconhecida a ação é recusada; desfragmentação não faz parte do WinCare. Exige administrador.",
+  "action.storage.optimize-retrim.desc": "Executa Optimize-Volume -ReTrim somente se a unidade do sistema for SSD. Em HDD ou mídia desconhecida a ação é recusada; desfragmentação não faz parte do WinCare. Exige administrador. Não pode ser desfeito (só informa ao SSD quais blocos estão livres; nenhum dado do usuário muda).",
   "action.integrity.sfc-verify": "Verificar arquivos do sistema (SFC, somente verificação)",
   "action.integrity.sfc-verify.desc": "Executa sfc /verifyonly: verifica os arquivos protegidos do Windows sem reparar nada. Exige administrador. A duração varia.",
   "action.integrity.sfc-scannow": "Verificar e reparar arquivos do sistema (SFC)",

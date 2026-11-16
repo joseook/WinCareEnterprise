@@ -62,7 +62,8 @@ function Invoke-WcDiagnostic {
     $ctx = New-WcContext -IsAdmin (Test-WcIsAdmin) -IsWindows (Test-WcIsWindows)
     $plan = New-WcPlan -Catalog $catalog -ActionId $ids -OperationProfile (Get-WcProfile $OperationProfileName) -Context $ctx
     $started = Get-Date
-    $results = Invoke-WcPlan -Plan $plan -Context $ctx
+    # Read-only snapshot: no before/after measurement around diagnostic sections (F5).
+    $results = Invoke-WcPlan -Plan $plan -Context $ctx -Measure None
 
     $snapshot = [ordered]@{
         Meta      = [ordered]@{

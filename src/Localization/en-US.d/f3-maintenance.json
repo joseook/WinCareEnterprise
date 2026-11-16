@@ -6,7 +6,7 @@
   "action.storage.optimize-analyze": "Analyze system drive optimization",
   "action.storage.optimize-analyze.desc": "Runs Optimize-Volume -Analyze on the system drive and shows the report. Read-only. Requires administrator.",
   "action.storage.optimize-retrim": "Run TRIM on the system drive (SSD)",
-  "action.storage.optimize-retrim.desc": "Runs Optimize-Volume -ReTrim only when the system drive is an SSD. Refused on HDD or unknown media; defragmentation is out of scope. Requires administrator.",
+  "action.storage.optimize-retrim.desc": "Runs Optimize-Volume -ReTrim only when the system drive is an SSD. Refused on HDD or unknown media; defragmentation is out of scope. Requires administrator. Cannot be undone (it only tells the SSD which blocks are free; no user data changes).",
   "action.integrity.sfc-verify": "Verify system files (SFC, verify only)",
   "action.integrity.sfc-verify.desc": "Runs sfc /verifyonly: checks protected Windows files without repairing anything. Requires administrator. Duration varies.",
   "action.integrity.sfc-scannow": "Verify and repair system files (SFC)",

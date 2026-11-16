@@ -11,7 +11,7 @@ BeforeAll {
     function New-TestAction {
         param([hashtable] $Override = @{})
         $a = @{ Id = 'test.action'; Category = 'Storage'; Risk = 'Low'; Modifies = $true; RequiresAdmin = $false
-            Reversible = $true; Handler = 'Test-Handler'; TitleKey = 'action.test' }
+            Reversible = $false; Reversibility = 'None'; Handler = 'Test-Handler'; TitleKey = 'action.test' }
         foreach ($k in $Override.Keys) { $a[$k] = $Override[$k] }
         return $a
     }
@@ -117,9 +117,9 @@ Describe 'Action catalog validation' {
     }
     It 'fails the whole load on one bad entry and on duplicates' {
         $p = Join-Path $script:Tmp 'cat.json'
-        Set-Content -LiteralPath $p -Value '{"actions":[{"Id":"a.b","Category":"Storage","Risk":"Low","Modifies":true,"RequiresAdmin":false,"Reversible":true,"Handler":"H","TitleKey":"t","Touches":["Defender"]}]}'
+        Set-Content -LiteralPath $p -Value '{"actions":[{"Id":"a.b","Category":"Storage","Risk":"Low","Modifies":true,"RequiresAdmin":false,"Reversible":false,"Reversibility":"None","Handler":"H","TitleKey":"t","Touches":["Defender"]}]}'
         { Import-WcActionCatalog -Path $p } | Should -Throw '*protected feature*'
-        Set-Content -LiteralPath $p -Value '{"actions":[{"Id":"a.b","Category":"Storage","Risk":"Low","Modifies":true,"RequiresAdmin":false,"Reversible":true,"Handler":"H","TitleKey":"t"},{"Id":"a.b","Category":"Storage","Risk":"Low","Modifies":true,"RequiresAdmin":false,"Reversible":true,"Handler":"H","TitleKey":"t"}]}'
+        Set-Content -LiteralPath $p -Value '{"actions":[{"Id":"a.b","Category":"Storage","Risk":"Low","Modifies":true,"RequiresAdmin":false,"Reversible":false,"Reversibility":"None","Handler":"H","TitleKey":"t"},{"Id":"a.b","Category":"Storage","Risk":"Low","Modifies":true,"RequiresAdmin":false,"Reversible":false,"Reversibility":"None","Handler":"H","TitleKey":"t"}]}'
         { Import-WcActionCatalog -Path $p } | Should -Throw '*Duplicate*'
     }
     It 'loads the shipped catalog' {
