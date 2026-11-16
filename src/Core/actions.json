@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "comment": "Allowlist of actions. Code lives in registered handlers, never here. Phase F1/F2: read-only actions only.",
+  "actions": [
+    { "Id": "diag.system",    "Category": "Diagnostics", "Risk": "None", "Modifies": false, "RequiresAdmin": false, "Reversible": true, "RequiresWindows": true, "Handler": "Diag-System",    "TitleKey": "action.diag.system" },
+    { "Id": "diag.storage",   "Category": "Storage",     "Risk": "None", "Modifies": false, "RequiresAdmin": false, "Reversible": true, "RequiresWindows": true, "Handler": "Diag-Storage",   "TitleKey": "action.diag.storage" },
+    { "Id": "diag.processes", "Category": "Processes",   "Risk": "None", "Modifies": false, "RequiresAdmin": false, "Reversible": true, "RequiresWindows": false, "Handler": "Diag-Processes", "TitleKey": "action.diag.processes" },
+    { "Id": "diag.startup",   "Category": "Startup",     "Risk": "None", "Modifies": false, "RequiresAdmin": false, "Reversible": true, "RequiresWindows": true, "Handler": "Diag-Startup",   "TitleKey": "action.diag.startup" },
+    { "Id": "diag.security",  "Category": "Security",    "Risk": "None", "Modifies": false, "RequiresAdmin": false, "Reversible": true, "RequiresWindows": true, "Handler": "Diag-Security",  "TitleKey": "action.diag.security" }
+  ]
+}
