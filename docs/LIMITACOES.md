@@ -6,10 +6,13 @@ Pelo CI (GitHub Actions `windows-latest`, Windows PowerShell 5.1.26100 Desktop, 
 - Renderização WPF de todas as páginas (tema escuro e claro, pt-BR e en-US) em PNG, sem erros de UI.
 - Relatório diagnóstico sem interface (`-NoGui`).
 
+## Homologação manual
+- 2026-11-16: v0.2.1 executada pelo mantenedor num **Windows 11 corporativo** (máquina gerenciada) com o comando `irm`: interface, diagnóstico e ações funcionaram sem erros (relato do usuário; sem relatório do kit anexado).
+
 ## O que NÃO foi verificado
 | Item | Situação | Consequência |
 |---|---|---|
-| Windows 10/11 **cliente** (Pro, Enterprise, IoT, LTSC) | Só Windows Server no CI | Edição, `EditionID`, Office e comportamento do usuário final dependem do kit (`docs/VALIDACAO-WINDOWS.md`) |
+| Windows 10 e edições IoT/LTSC | Windows 11 corporativo homologado manualmente; Windows 10/IoT/LTSC não | Edição, `EditionID`, Office e comportamento do usuário final dependem do kit (`docs/VALIDACAO-WINDOWS.md`) |
 | Interação humana na interface | Renderização automática, sem cliques reais | Checklist interativo pendente (navegação, cancelamento, diálogos, DPI alto) |
 | UAC / botão "Executar como administrador" | Lógica testada; prompt de UAC não pode ser automatizado | Validar em máquina com usuário padrão e com credencial de outra conta |
 | `AllSigned` por GPO e AppLocker/WDAC reais | `AllSigned` validado por processo; AppLocker não | Validar em máquina de domínio |
