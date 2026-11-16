@@ -19,6 +19,9 @@ Pelo CI (GitHub Actions `windows-latest`, Windows PowerShell 5.1.26100 Desktop, 
 | Ações destrutivas reais (limpeza, SFC/DISM `/RestoreHealth`, ReTrim) no hardware do usuário | Rodam no CI só em modo seguro/prévia | Primeira execução real em laboratório |
 | Office instalado | Runner do CI não tem Office | Medição do Word e reparo validados só com mocks |
 | `New-ReleasePackage.ps1` (Authenticode do mantenedor) | Não executado | Exige certificado pago; o modelo atual é RSA (gratuito) |
+| F6 `winget upgrade` real, `Reset-AppxPackage`, `ipconfig /renew`, `netsh winsock reset` | Só prévia e validação nos testes; no CI só `network.flush-dns` roda de verdade | Primeira execução real em VM cliente com snapshot |
+| F6 tabela do winget e saída do `netsh` localizadas | Parsers testados com fixtures pt-BR/en-US (UTF-8 e cp850); codificação real da saída do winget redirecionado (UTF-8 assumido) não conferida | Conferir num Windows pt-BR com winget |
+| F6 `Get-AppxPackage` no PowerShell 7 | Erros do módulo Appx no PS 7 viram aviso da seção | Conferir em Windows 11 com PS 7 |
 | Códigos dos ícones Segoe MDL2 | Escolhidos de memória | Conferir nas capturas/checklist |
 
 ## Limitações de projeto (conhecidas)

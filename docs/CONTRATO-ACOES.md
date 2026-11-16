@@ -20,9 +20,9 @@ Toda ação que o WinCare executa segue este contrato. A UI (páginas Otimizaç�
   - `ReadOnly`: não modifica (exigido quando `Modifies:false`);
   - `None`: modifica e **não** pode ser desfeito pelo WinCare (exige `Reversible:false`);
   - `RestorePoint`: mudança de estado do sistema que um ponto de restauração tirado antes desfaz (exige risco Medium/High).
-  Valores atuais: limpeza de temporários, ReTrim, `sfc /scannow` e `DISM /RestoreHealth` = `None`; todo o resto = `ReadOnly`. Nenhuma ação atual declara `RestorePoint`.
+  Valores atuais: limpeza de temporários, ReTrim, `sfc /scannow`, `DISM /RestoreHealth`, `apps.winget-upgrade`, `apps.store-reset`, `network.flush-dns` e `network.renew-ip` = `None`; `network.reset-winsock` = `RestorePoint` (o catálogo Winsock fica no Registro, que a Restauração do Sistema reverte); todo o resto = `ReadOnly`.
 - `Touches` com recurso protegido (Defender, Firewall, BitLocker, WindowsUpdate, GroupPolicy, MDM, EDR, VPN, Authentication, Inventory, ExecutionPolicy, UAC, SmartScreen) ⇒ catálogo rejeitado.
-- `Pages`: quick | advanced | integrity | office | storage | startup.
+- `Pages`: quick | advanced | integrity | office | storage | startup | processes | health | apps | network.
 
 ## 2. Handler — função `Register-Wc<Modulo>Handler` exportada (registro preguiçoso)
 ```powershell
@@ -94,3 +94,36 @@ Regras:
 - Linhas já formatadas para exibição (bytes legíveis, datas locais curtas). Valores numéricos para ordenação podem ir numa coluna extra cujo nome termina em `Raw` (a interface a esconde).
 - Toda coluna `X` precisa de `col.X` nos dois idiomas (fragmento do módulo).
 - As ações da área vão no catálogo com `"Pages": ["<página>"]` e aparecem embaixo das seções, com prévia e confirmação como nas demais.
+
+## 7. Seleção do usuário (ids escolhidos numa seção)
+
+Algumas ações agem sobre linhas que o usuário marca numa seção (ex.: pacotes do winget). Os handlers continuam recebendo **só o contexto**; a seleção viaja nele:
+
+```powershell
+$ctx = New-WcContext -IsAdmin ... -IsManaged ... -Build ...
+$ctx.Selection = @{
+    'apps.winget-upgrade' = @('Microsoft.Edge', 'Mozilla.Firefox')   # valores da coluna PackageId
+    'apps.store-reset'    = @('Microsoft.WindowsCalculator_11.2210.0.0_x64__8wekyb3d8bbwe')  # coluna PackageFullName
+    'apps.open-repair'    = @('Nome do app')                          # coluna Name (só exibido no resumo)
+}
+$plan = New-WcPlan ... -Context $ctx
+Invoke-WcPlan -Plan $plan -Context $ctx -DryRun   # prévia lista exatamente os ids selecionados
+```
+
+- Chave = id da ação no catálogo; valor = lista de strings (um único id também é aceito). Sem chave ⇒ lista vazia: a prévia diz que nada foi selecionado e o Execute recusa.
+- A interface só passa valores copiados das linhas da seção (nunca texto digitado). O handler valida tudo de novo e **falha fechado** (lança exceção, nada roda) se um valor for inválido:
+  - `apps.winget-upgrade`: cada id casa com `^[A-Za-z0-9._+-]{1,128}$` e não começa com `-` (impede `--all`, `-h`...); duplicados (sem diferenciar maiúsculas) são removidos; no máximo 50.
+  - `apps.store-reset`: exatamente **um** `PackageFullName` (`Nome_Versão_Arquitetura_Recurso_Editor`), do usuário atual, que não seja framework.
+  - `apps.open-repair`: opcional; só aparece no resumo (caracteres de controle removidos, até 128). Nada da seleção é passado ao `ms-settings:`.
+- Leitura no handler: `Get-WcAppsSelection -Context $Context -ActionId '<id>'` (`WinCare.Apps`).
+
+## 8. Páginas F6: aplicativos e rede
+
+| Página | Função | Seções (`Id`: colunas) |
+|---|---|---|
+| `apps` | `Get-WcAppsPageData` | `installed`: Name, Version, Publisher, InstallDate, Size, SizeRaw, Scope, Executable, Uninstall · `broken-uninstall`: Name, Version, Scope, Executable · `winget-updates`: Name, PackageId, Version, Available, Source (falha: Status, Detail) · `store-problems`: Name, Version, Status, PackageFullName |
+| `network` | `Get-WcNetworkPageData` | `adapters`: Name, Description, Status, LinkSpeed, IPv4, IPv6, Gateway, DnsServers, Dhcp · `connectivity`: Check, Target, Status, Latency, LatencyRaw, Detail · `proxy`: Source, Item, Value · `vpn`: Name, Type, Status, Source |
+
+- `winget-updates`: `NoteKey` explica o estado (`.note`, `.note.none`, `.note.partial`, `.note.failed`, `.note.not-found`, `.note.system-context`). O winget é um alias por usuário (`%LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe`): como SYSTEM, ou sem App Installer, a seção diz por quê e não roda nada. A saída `upgrade` não tem formato JSON documentado; a tabela de texto é lida por posição de coluna (cabeçalho localizado) e linhas que não alinham ficam fora (contadas, nota `.partial`), nunca adivinhadas.
+- `connectivity`: `NoteKey` = `section.network.connectivity.verdict.<ok|no-network|dns|captive-portal|proxy-auth|internet-or-proxy|gateway-icmp|partial|unknown>`. Sondas: ping ao gateway IPv4, `Resolve-DnsName www.msftconnecttest.com`, `http://www.msftconnecttest.com/connecttest.txt` (corpo exato, como o NCSI do Windows) e `HEAD https://www.microsoft.com/` (o msftconnecttest não tem certificado HTTPS válido). Sem cookies, credenciais, User-Agent ou redirecionamento.
+- Ações: `apps.winget-upgrade` (Medium, BlockedWhenManaged, uma execução do winget por id, nunca `--all`), `apps.store-reset` (Medium, `Reset-AppxPackage`, apaga os dados locais do app; indisponível antes do build 19041), `apps.open-repair` (Low, só abre Configurações), `network.flush-dns` (Low), `network.renew-ip` (Medium, admin, BlockedWhenManaged), `network.reset-winsock` (High, admin, BlockedWhenManaged, `RestorePoint`, exige reinício — o WinCare nunca reinicia).
