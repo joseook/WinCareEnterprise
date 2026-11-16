@@ -51,7 +51,7 @@ function ConvertTo-WcFreeSpaceMetric {
         if ($null -ne $free) { $value = [long]$free }
         $out += New-WcMetric -Source System -Name 'FreeBytes' -Target $id.ToUpperInvariant() -Unit 'Bytes' -Value $value
     }
-    return , @($out | Sort-Object Target)
+    return @($out | Sort-Object Target)
 }
 
 function Measure-WcSystemFreeSpace {
@@ -93,7 +93,7 @@ function ConvertTo-WcRestorePointRow {
         if ($null -ne $typeId -and $script:WcRestorePointTypes.ContainsKey([int]$typeId)) { $type = $script:WcRestorePointTypes[[int]$typeId] }
         $rows += [pscustomobject]@{ SequenceNumber = [long]$seq; Created = $createdText; Description = [string](Get-WcObjectValue $p 'Description'); Type = $type }
     }
-    return , @($rows | Sort-Object SequenceNumber -Descending)
+    return @($rows | Sort-Object SequenceNumber -Descending)
 }
 
 function Select-WcRecentRestorePoint {
@@ -223,7 +223,7 @@ function Invoke-WcCheckpointComputer {
     param([Parameter(Mandatory = $true)][ValidatePattern('^[A-Za-z0-9 \.\-]{1,100}$')][string] $Description)
     $warnings = @()
     Checkpoint-Computer -Description $Description -RestorePointType 'MODIFY_SETTINGS' -ErrorAction Stop -WarningAction SilentlyContinue -WarningVariable warnings
-    return , @($warnings | ForEach-Object { [string]$_ })
+    return @($warnings | ForEach-Object { [string]$_ })
 }
 
 function New-WcRestorePoint {
@@ -252,7 +252,7 @@ function New-WcRestorePoint {
         if ($new) {
             return (New-WcRestorePointOutcome -Status Created -SequenceNumber $new.SequenceNumber -CreationTime $new.Created -Description $new.Description -Detail 'Restore point created.')
         }
-        $warnText = ($warnings -join ' ')
+        $warnText = (@($warnings | ForEach-Object { @($_) -join ' ' }) -join ' ').Trim()
         if ($warnText -match '(?i)1440|already been created|within the past') {
             return (New-WcRestorePointOutcome -Status Skipped -Reason 'created-recently' -Detail $warnText)
         }

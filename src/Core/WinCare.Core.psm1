@@ -578,7 +578,7 @@ function ConvertTo-WcMetricList {
         $value = $null; if ($h.Contains('Value')) { $value = $h['Value'] }
         $out += New-WcMetric -Name ([string]$h['Name']) -Target $target -Unit $unit -Value $value -Source $Source
     }
-    return , $out
+    return $out
 }
 
 function Invoke-WcMeasurement {
