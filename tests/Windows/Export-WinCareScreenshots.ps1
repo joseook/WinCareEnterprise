@@ -16,7 +16,9 @@ Import-Module (Join-Path $src 'UI\WinCare.UI.psm1') -Force -DisableNameChecking
 $version = (Import-PowerShellDataFile (Join-Path $src 'WinCare.psd1')).ModuleVersion
 Initialize-WcLog | Out-Null
 Import-WcLocalization -Root (Join-Path $src 'Localization') -Language 'pt-BR' | Out-Null
+Write-Host 'Collecting diagnostic...'
 $snap = Invoke-WcDiagnostic -CatalogPath (Join-Path $src 'Core\actions.json') -AppVersion $version
+Write-Host 'Diagnostic done; rendering pages.'
 foreach ($lang in 'pt-BR', 'en-US') {
     $files = Export-WcUiSnapshot -AppRoot $src -Version $version -OutputDirectory $OutputDirectory -Snapshot $snap -Language $lang -Theme @('Dark', 'Light')
     Write-Host ("{0}: {1} screenshots" -f $lang, @($files).Count)

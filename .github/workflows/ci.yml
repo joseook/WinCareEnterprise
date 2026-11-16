@@ -22,10 +22,12 @@ jobs:
         run: .\scripts\Invoke-WinCareTests.ps1
       - name: UI screenshots (real WPF render)
         if: always()
+        timeout-minutes: 10
         shell: powershell
         run: powershell.exe -NoProfile -STA -File .\tests\Windows\Export-WinCareScreenshots.ps1
       - name: Headless diagnostic report
         if: always()
+        timeout-minutes: 10
         shell: powershell
         run: .\src\Start-WinCare.ps1 -NoGui -OutputPath .\TestResults\diagnostic.html
       - uses: actions/upload-artifact@v4

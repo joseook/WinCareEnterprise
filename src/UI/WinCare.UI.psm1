@@ -46,6 +46,8 @@ function Invoke-WcUiSafe {
     try { & $Body }
     catch {
         Write-WcLog -Level Error -Category 'UI' -Message $_.Exception.Message | Out-Null
+        # Headless (snapshot/CI): never open a modal dialog nobody can close.
+        if ($script:Ui -and $script:Ui.Headless) { [void]$script:Ui.Errors.Add(('{0} @ {1}' -f $_.Exception.Message, $_.InvocationInfo.PositionMessage)); return }
         [System.Windows.MessageBox]::Show($_.Exception.Message, 'WinCare Enterprise', 'OK', 'Error') | Out-Null
     }
 }
@@ -639,6 +641,8 @@ function Initialize-WcUi {
         SuppressSettingEvents = $false
         AutoDiagnostic = $AutoDiagnostic
         Catalog      = $null
+        Headless     = $false
+        Errors       = New-Object System.Collections.ArrayList
     }
     $script:Ui.Catalog = Import-WcActionCatalog -Path $script:Ui.CatalogPath
     Set-WcLogSink -Sink $script:Ui.LogQueue
@@ -710,6 +714,7 @@ function Export-WcUiSnapshot {
     if (-not (Test-Path -LiteralPath $OutputDirectory)) { New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null }
     $settings = @{ Theme = $Theme[0]; Language = $Language; Profile = 'Diagnostico' }
     $window = Initialize-WcUi -AppRoot $AppRoot -Version $Version -Settings $settings -AutoDiagnostic $false
+    $script:Ui.Headless = $true
     $script:Ui.Snapshot = $Snapshot
     $window.WindowStartupLocation = 'Manual'
     $window.Left = 0; $window.Top = 0; $window.Width = 1240; $window.Height = 800
@@ -721,8 +726,9 @@ function Export-WcUiSnapshot {
         $i = 0
         foreach ($id in @($script:PageDefs.Keys)) {
             $i++
+            Write-Host ("  [{0}/{1}] {2} ({3})" -f $i, $script:PageDefs.Count, $id, $t)
             $window.FindName('NavList').SelectedIndex = $i - 1
-            Show-WcPage -PageId $id
+            Invoke-WcUiSafe { Show-WcPage -PageId $id }
             $window.UpdateLayout()
             $window.Dispatcher.Invoke([System.Action]{ }, [System.Windows.Threading.DispatcherPriority]::ApplicationIdle)
             $w = [int]$window.ActualWidth; $h = [int]$window.ActualHeight
@@ -738,6 +744,10 @@ function Export-WcUiSnapshot {
     }
     $window.Close()
     Set-WcLogSink -Sink $null
+    if ($script:Ui.Errors.Count -gt 0) {
+        foreach ($e in $script:Ui.Errors) { Write-Warning $e }
+        throw ('{0} UI error(s) while rendering pages (see warnings).' -f $script:Ui.Errors.Count)
+    }
     return $files
 }
 
