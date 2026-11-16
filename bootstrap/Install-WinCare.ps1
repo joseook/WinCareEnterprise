@@ -2,7 +2,7 @@
 <#
 .SYNOPSIS
     Verifies and starts a WinCare Enterprise release. One command, no installer,
-    no "irm | iex", no execution-policy bypass.
+    no execution-policy bypass.
 
 .DESCRIPTION
     Trust model (fail closed - any check that cannot be completed stops the run):
@@ -21,6 +21,10 @@
       6. The verified package goes to a versioned cache and is re-verified on every
          start. WinCare is started with process-scope RemoteSigned, which never
          overrides Group Policy (MachinePolicy/UserPolicy win).
+      7. Elevated runs never execute user-writable code: as administrator the cache
+         is under Program Files (admin-only write), and -Elevate makes the elevated
+         process download install.ps1 again into Program Files and check that its
+         SHA-256 equals this file before running it.
 
 .PARAMETER Version
     Release to start (x.y.z). Defaults to the release this file was published with.
@@ -32,6 +36,9 @@
     SHA-256 of the zip obtained out of band.
 .PARAMETER VerifyOnly
     Verify and cache, but do not start the interface.
+.PARAMETER Elevate
+    Ask for administrator rights (UAC) and run from Program Files. Needed to apply
+    maintenance actions that require admin. Online mode only.
 #>
 [CmdletBinding()]
 param(
@@ -40,7 +47,8 @@ param(
     [string] $ManifestPath,
     [string] $ExpectedSha256,
     [string] $CacheRoot,
-    [switch] $VerifyOnly
+    [switch] $VerifyOnly,
+    [switch] $Elevate
 )
 
 Set-StrictMode -Version 2.0
@@ -81,7 +89,24 @@ function Test-WcbReleaseUri {
     return ($AllowedHosts -contains $u.Host.ToLowerInvariant())
 }
 
+function Test-WcbIsAdmin {
+    try {
+        $id = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+        return (New-Object System.Security.Principal.WindowsPrincipal($id)).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
+    }
+    catch { return $false }
+}
+
+function Get-WcbMachineRoot {
+    <# Program Files\WinCare: only administrators can write there (default ACL). #>
+    $pf = $env:ProgramFiles
+    if (-not $pf) { $pf = 'C:\Program Files' }
+    return ($pf.TrimEnd('\') + '\WinCare')
+}
+
 function Get-WcbDefaultCacheRoot {
+    param([switch] $Machine)
+    if ($Machine) { return ((Get-WcbMachineRoot) + '\app') }
     $base = [System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::LocalApplicationData)
     if (-not $base) { $base = [System.IO.Path]::GetTempPath() }
     return (Join-Path (Join-Path $base 'WinCare') 'app')
@@ -233,7 +258,94 @@ function Get-WcbDownload {
     param([string] $Uri, [string] $OutFile)
     if (-not (Test-WcbReleaseUri $Uri)) { throw "Refusing non-official or non-HTTPS URL: $Uri" }
     [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
+    # Corporate proxies that require Windows authentication.
+    try { [System.Net.WebRequest]::DefaultWebProxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials } catch { Write-Verbose 'No default proxy.' }
     Invoke-WebRequest -Uri $Uri -OutFile $OutFile -UseBasicParsing -ErrorAction Stop
+}
+
+function Get-WcbEnvironmentBlock {
+    <#
+        Returns $null when the app can start here, or a message explaining which
+        corporate control blocks it. Never tries to work around the control.
+        $LanguageMode / $Policies are parameters so the logic is testable.
+    #>
+    param(
+        [string] $LanguageMode = [string]$ExecutionContext.SessionState.LanguageMode,
+        [hashtable] $Policies,
+        [string[]] $TrustedThumbprints = $script:WcbTrustedThumbprints
+    )
+    if ($LanguageMode -and $LanguageMode -ne 'FullLanguage') {
+        return ("PowerShell is in {0} (AppLocker/WDAC). WinCare needs FullLanguage; ask IT to allow the WinCare publisher or the signed package. See docs/CORPORATIVO.md." -f $LanguageMode)
+    }
+    if ($null -eq $Policies) {
+        $Policies = @{}
+        foreach ($sc in 'MachinePolicy', 'UserPolicy') {
+            try { $Policies[$sc] = [string](Get-ExecutionPolicy -Scope $sc) } catch { $Policies[$sc] = 'Undefined' }
+        }
+    }
+    $signed = (@($TrustedThumbprints | Where-Object { $_ }).Count -gt 0)
+    foreach ($sc in 'MachinePolicy', 'UserPolicy') {
+        $p = [string]$Policies[$sc]
+        if ($p -eq 'Restricted') { return ("Group Policy ({0}) sets the execution policy to Restricted: no script can run. Ask IT; see docs/CORPORATIVO.md." -f $sc) }
+        if ($p -eq 'AllSigned' -and -not $signed) { return ("Group Policy ({0}) requires AllSigned and this build has no Authenticode signature. IT can sign it with the organization certificate (scripts/Protect-WinCareWithOrgCertificate.ps1); see docs/CORPORATIVO.md." -f $sc) }
+    }
+    return $null
+}
+
+function New-WcbElevatedCommand {
+    <#
+        Script text for the elevated process (passed by -EncodedCommand, so no
+        user-writable file is executed as admin). It downloads install.ps1 into
+        Program Files, checks the SHA-256 and runs it. Inputs are validated: the
+        result never contains caller-controlled code.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][string] $Version,
+        [Parameter(Mandatory = $true)][string] $InstallUri,
+        [Parameter(Mandatory = $true)][string] $InstallSha256,
+        [string[]] $AllowedHosts = $script:WcbAllowedHosts
+    )
+    if (-not (Test-WcbVersion $Version)) { throw 'Invalid version.' }
+    if (-not (Test-WcbSha256Text $InstallSha256)) { throw 'Invalid SHA-256.' }
+    if (-not (Test-WcbReleaseUri -Uri $InstallUri -AllowedHosts $AllowedHosts)) { throw "Refusing non-official or non-HTTPS URL: $InstallUri" }
+    # The URL is embedded in a quoted string: allow only characters that cannot break out.
+    if ($InstallUri -notmatch '^https://[A-Za-z0-9.-]+/[A-Za-z0-9._/-]+$') { throw 'URL has characters that are not allowed.' }
+    $lines = @(
+        '$ErrorActionPreference = ''Stop''',
+        'try {',
+        '    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12',
+        '    try { [Net.WebRequest]::DefaultWebProxy.Credentials = [Net.CredentialCache]::DefaultNetworkCredentials } catch { Write-Verbose ''no proxy'' }',
+        '    $pf = $env:ProgramFiles; if (-not $pf) { $pf = ''C:\Program Files'' }',
+        '    $d = Join-Path $pf ''WinCare\bootstrap''',
+        '    New-Item -ItemType Directory -Path $d -Force | Out-Null',
+        ('    $f = Join-Path $d ''install-{0}.ps1''' -f $Version),
+        ('    Invoke-WebRequest -Uri ''{0}'' -UseBasicParsing -OutFile $f' -f $InstallUri),
+        ('    if ((Get-FileHash -LiteralPath $f -Algorithm SHA256).Hash -ne ''{0}'') {{ Remove-Item -LiteralPath $f -Force; throw ''install.ps1 hash mismatch - nothing was started.'' }}' -f $InstallSha256.ToUpperInvariant()),
+        '    $ps = Join-Path $env:SystemRoot ''System32\WindowsPowerShell\v1.0\powershell.exe''',
+        ('    & $ps -NoProfile -ExecutionPolicy RemoteSigned -File $f -Version ''{0}''' -f $Version),
+        '    if ($LASTEXITCODE -ne 0) { throw (''install.ps1 exited with code '' + $LASTEXITCODE) }',
+        '}',
+        'catch { Write-Host (''WinCare: '' + $_.Exception.Message) -ForegroundColor Red; Read-Host ''Press Enter to close'' | Out-Null }'
+    )
+    return ($lines -join "`r`n")
+}
+
+function ConvertTo-WcbEncodedCommand {
+    param([Parameter(Mandatory = $true)][string] $Text)
+    return [System.Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($Text))
+}
+
+function Start-WcbElevated {
+    <# Re-runs this release elevated (UAC). Online mode only. #>
+    param([string] $Version, [string] $SelfPath)
+    if (-not $SelfPath -or -not (Test-Path -LiteralPath $SelfPath)) { throw '-Elevate needs install.ps1 to run from a file.' }
+    $uri = '{0}/v{1}/install.ps1' -f $script:WcbReleaseBaseUri, $Version
+    $cmd = New-WcbElevatedCommand -Version $Version -InstallUri $uri -InstallSha256 (Get-WcbSha256 $SelfPath)
+    $sysRoot = $env:SystemRoot
+    if (-not $sysRoot) { $sysRoot = 'C:\Windows' }
+    $ps51 = $sysRoot.TrimEnd('\') + '\System32\WindowsPowerShell\v1.0\powershell.exe'
+    Write-Host 'Requesting administrator rights (UAC)...'
+    Start-Process -FilePath $ps51 -Verb RunAs -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'RemoteSigned', '-EncodedCommand', (ConvertTo-WcbEncodedCommand $cmd)) | Out-Null
 }
 
 # -------------------------------------------------------------------- main --
@@ -241,12 +353,21 @@ function Get-WcbDownload {
 function Invoke-WcbMain {
     param(
         [string] $Version, [string] $PackagePath, [string] $ManifestPath, [string] $ExpectedSha256,
-        [string] $CacheRoot, [switch] $VerifyOnly
+        [string] $CacheRoot, [switch] $VerifyOnly, [switch] $Elevate, [string] $SelfPath
     )
     if (-not $Version) { $Version = $script:WcbDefaultVersion }
     if (-not (Test-WcbVersion $Version)) { throw 'Use -Version x.y.z (explicit version is required).' }
     if ($ExpectedSha256 -and -not (Test-WcbSha256Text $ExpectedSha256)) { throw '-ExpectedSha256 must be 64 hex characters.' }
-    if (-not $CacheRoot) { $CacheRoot = Get-WcbDefaultCacheRoot }
+    $block = Get-WcbEnvironmentBlock
+    if ($block) { throw $block }
+    $isAdmin = Test-WcbIsAdmin
+    if ($Elevate -and -not $isAdmin) {
+        if ($PackagePath -or $ManifestPath) { throw '-Elevate works online only. Offline: copy the package to an admin-only folder and run install.ps1 from an elevated PowerShell.' }
+        Start-WcbElevated -Version $Version -SelfPath $SelfPath
+        return $null
+    }
+    # As administrator the cache lives where standard users cannot write.
+    if (-not $CacheRoot) { $CacheRoot = Get-WcbDefaultCacheRoot -Machine:$isAdmin }
     $target = Join-Path $CacheRoot $Version
     $cachedManifest = Join-Path $target '.wincare-manifest.json'
 
@@ -312,7 +433,7 @@ function Invoke-WcbMain {
 # Dot-sourcing (tests) only loads the functions.
 if ($MyInvocation.InvocationName -ne '.') {
     try {
-        Invoke-WcbMain -Version $Version -PackagePath $PackagePath -ManifestPath $ManifestPath -ExpectedSha256 $ExpectedSha256 -CacheRoot $CacheRoot -VerifyOnly:$VerifyOnly | Out-Null
+        Invoke-WcbMain -Version $Version -PackagePath $PackagePath -ManifestPath $ManifestPath -ExpectedSha256 $ExpectedSha256 -CacheRoot $CacheRoot -VerifyOnly:$VerifyOnly -Elevate:$Elevate -SelfPath $PSCommandPath | Out-Null
     }
     catch {
         Write-Error ('WinCare bootstrap stopped: ' + $_.Exception.Message)

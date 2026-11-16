@@ -205,3 +205,65 @@ Describe 'Optional Authenticode layer (mocked)' {
         @(Test-WcbAuthenticode -Root $script:Pkg -TrustedThumbprints @($script:Thumb)).Count | Should -BeGreaterThan 0
     }
 }
+
+Describe 'Corporate environment checks' {
+    It 'blocks Constrained Language Mode with guidance' {
+        $m = Get-WcbEnvironmentBlock -LanguageMode 'ConstrainedLanguage' -Policies @{ MachinePolicy = 'Undefined'; UserPolicy = 'Undefined' }
+        $m | Should -Match 'ConstrainedLanguage'
+        $m | Should -Match 'CORPORATIVO'
+    }
+    It 'blocks GPO Restricted' {
+        Get-WcbEnvironmentBlock -LanguageMode 'FullLanguage' -Policies @{ MachinePolicy = 'Restricted'; UserPolicy = 'Undefined' } | Should -Match 'Restricted'
+    }
+    It 'blocks GPO AllSigned when the build is not Authenticode-signed' {
+        Get-WcbEnvironmentBlock -LanguageMode 'FullLanguage' -Policies @{ MachinePolicy = 'Undefined'; UserPolicy = 'AllSigned' } -TrustedThumbprints @() | Should -Match 'AllSigned'
+    }
+    It 'allows AllSigned when thumbprints are pinned' {
+        Get-WcbEnvironmentBlock -LanguageMode 'FullLanguage' -Policies @{ MachinePolicy = 'AllSigned'; UserPolicy = 'Undefined' } -TrustedThumbprints @('AB' * 20) | Should -BeNullOrEmpty
+    }
+    It 'allows RemoteSigned / undefined policies' {
+        Get-WcbEnvironmentBlock -LanguageMode 'FullLanguage' -Policies @{ MachinePolicy = 'RemoteSigned'; UserPolicy = 'Undefined' } | Should -BeNullOrEmpty
+    }
+    It 'uses Program Files for the machine cache' {
+        Get-WcbDefaultCacheRoot -Machine | Should -Match 'WinCare.app$'
+        Get-WcbMachineRoot | Should -Match 'WinCare$'
+    }
+}
+
+Describe 'Elevated command' {
+    BeforeAll {
+        $script:okUri = 'https://github.com/joseook/WinCareEnterprise/releases/download/v1.2.3/install.ps1'
+        $script:okHash = 'A' * 64
+    }
+    It 'produces a script that parses and pins version, URL and hash' {
+        $t = New-WcbElevatedCommand -Version '1.2.3' -InstallUri $script:okUri -InstallSha256 $script:okHash
+        $errs = $null
+        [void][System.Management.Automation.Language.Parser]::ParseInput($t, [ref]$null, [ref]$errs)
+        @($errs).Count | Should -Be 0
+        $t | Should -Match ([regex]::Escape($script:okUri))
+        $t | Should -Match $script:okHash
+        $t | Should -Match "install-1\.2\.3\.ps1"
+        $t | Should -Match 'RemoteSigned'
+        $t | Should -Not -Match 'Bypass'
+        $t | Should -Not -Match 'Invoke-Expression|iex '
+    }
+    It 'rejects a bad version (injection attempt)' {
+        { New-WcbElevatedCommand -Version "1.2.3'; calc; '" -InstallUri $script:okUri -InstallSha256 $script:okHash } | Should -Throw
+    }
+    It 'rejects a bad hash' {
+        { New-WcbElevatedCommand -Version '1.2.3' -InstallUri $script:okUri -InstallSha256 'zz' } | Should -Throw
+    }
+    It 'rejects non-official or non-HTTPS URLs' {
+        { New-WcbElevatedCommand -Version '1.2.3' -InstallUri 'http://github.com/x/install.ps1' -InstallSha256 $script:okHash } | Should -Throw
+        { New-WcbElevatedCommand -Version '1.2.3' -InstallUri 'https://evil.example/install.ps1' -InstallSha256 $script:okHash } | Should -Throw
+    }
+    It 'encodes as UTF-16LE base64 for -EncodedCommand' {
+        $b = ConvertTo-WcbEncodedCommand 'Write-Host 1'
+        [System.Text.Encoding]::Unicode.GetString([Convert]::FromBase64String($b)) | Should -Be 'Write-Host 1'
+    }
+    It 'refuses -Elevate in offline mode' {
+        Mock Test-WcbIsAdmin { $false }
+        Mock Get-WcbEnvironmentBlock { $null }
+        { Invoke-WcbMain -Version '1.2.3' -PackagePath 'x.zip' -ManifestPath 'x.json' -Elevate } | Should -Throw '*online only*'
+    }
+}
