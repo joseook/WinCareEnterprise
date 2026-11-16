@@ -192,5 +192,15 @@
   "col.Summary": "Resumo",
   "col.Freed": "Liberado",
   "col.Mode": "Modo",
-  "reports.actions-history": "Histórico de ações (prévias e execuções)"
+  "reports.actions-history": "Histórico de ações (prévias e execuções)",
+  "col.SizeBytes": "Tamanho",
+  "col.RequiresAdmin": "Requer admin",
+  "col.Modifies": "Altera",
+  "col.Duration": "Duração",
+  "col.Tool": "Ferramenta",
+  "col.ExitCode": "Código de saída",
+  "col.Detail": "Detalhe",
+  "col.MatchedBy": "Critério",
+  "col.Path": "Caminho",
+  "col.Reason": "Motivo"
 }

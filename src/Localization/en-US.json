@@ -192,5 +192,15 @@
   "col.Summary": "Summary",
   "col.Freed": "Freed",
   "col.Mode": "Mode",
-  "reports.actions-history": "Action history (previews and runs)"
+  "reports.actions-history": "Action history (previews and runs)",
+  "col.SizeBytes": "Size",
+  "col.RequiresAdmin": "Requires admin",
+  "col.Modifies": "Modifies",
+  "col.Duration": "Duration",
+  "col.Tool": "Tool",
+  "col.ExitCode": "Exit code",
+  "col.Detail": "Detail",
+  "col.MatchedBy": "Matched by",
+  "col.Path": "Path",
+  "col.Reason": "Reason"
 }
