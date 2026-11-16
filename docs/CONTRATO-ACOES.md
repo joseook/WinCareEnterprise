@@ -19,10 +19,15 @@ Toda ação que o WinCare executa segue este contrato. A UI (páginas Otimizaç�
 - `Touches` com recurso protegido (Defender, Firewall, BitLocker, WindowsUpdate, GroupPolicy, MDM, EDR, VPN, Authentication, Inventory, ExecutionPolicy, UAC, SmartScreen) ⇒ catálogo rejeitado.
 - `Pages`: quick | advanced | integrity | office | storage | startup.
 
-## 2. Handler — registrado no fim do próprio `.psm1`, na importação
+## 2. Handler — função `Register-Wc<Modulo>Handler` exportada (registro preguiçoso)
 ```powershell
-Register-WcActionHandler -Name 'Cleanup-UserTemp' -Preview { param($Context) ... } -Execute { param($Context) ... }
+function Register-WcCleanupHandler {
+    Register-WcActionHandler -Name 'Cleanup-UserTemp' -Preview { param($Context) ... } -Execute { param($Context) ... }
+}
+Export-ModuleMember -Function @('Register-WcCleanupHandler', ...)
 ```
+- **Não** registrar na importação: carregado pelo `WinCare.psd1` (NestedModules), o módulo ainda não enxerga as funções do Core (achado no CI Windows). `New-WcPlan` chama `Initialize-WcActionHandlers`, que executa todas as `Register-Wc*Handler`.
+- O módulo novo entra em `NestedModules` do `WinCare.psd1`; o teste de sessão limpa (`Static.Tests.ps1`) falha se alguma ação do catálogo ficar sem handler.
 - **Preview** não altera nada. Retorna `New-WcActionResult` com o que *seria* feito (itens, bytes estimados).
 - **Execute** faz a ação e retorna `New-WcActionResult` com antes/depois medidos.
 - Formato (`[pscustomobject]`): `Summary` (string curta, inglês técnico; a UI mostra), `Items` (array de objetos simples para tabela), `BytesBefore`/`BytesAfter`/`BytesFreed` (quando couber), `Output` (texto bruto de comando externo), `ExitCode`, `RollbackData` (para F5; `$null` se irreversível).

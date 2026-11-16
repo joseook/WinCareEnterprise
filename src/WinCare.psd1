@@ -1,7 +1,7 @@
 @{
     # WinCare Enterprise - module manifest. Version is the single source of truth
     # for the app version (read by Start-WinCare.ps1 and the packaging scripts).
-    ModuleVersion        = '0.1.0'
+    ModuleVersion        = '0.2.0'
     GUID                 = '6f0f8f8e-4a37-4c1e-9a55-2b8d0f3c7a11'
     Author               = 'WinCare Enterprise contributors'
     CompanyName          = 'WinCare Enterprise'
@@ -18,7 +18,8 @@
         'Modules/WinCare.Diagnostics.psm1',
         'Modules/WinCare.Reporting.psm1',
         'Modules/WinCare.Cleanup.psm1',
-        'Modules/WinCare.Integrity.psm1'
+        'Modules/WinCare.Integrity.psm1',
+        'Modules/WinCare.Office.psm1'
     )
     FunctionsToExport    = '*'
     CmdletsToExport      = @()

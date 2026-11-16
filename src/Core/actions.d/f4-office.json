@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "comment": "Phase F4 - Microsoft Office diagnostics (module WinCare.Office). None of these actions changes Office, documents, templates, profiles or policies.",
+  "actions": [
+    { "Id": "office.inventory", "Category": "Office", "Risk": "None", "Modifies": false, "RequiresAdmin": false, "Reversible": true,
+      "RequiresWindows": true, "BlockedWhenManaged": false, "MinBuild": 10240, "Editions": null, "Pages": ["office"],
+      "Handler": "Office-Inventory", "TitleKey": "action.office.inventory", "DescriptionKey": "action.office.inventory.desc" },
+    { "Id": "office.measure-word-start", "Category": "Office", "Risk": "Low", "Modifies": false, "RequiresAdmin": false, "Reversible": true,
+      "RequiresWindows": true, "BlockedWhenManaged": false, "MinBuild": 10240, "Editions": null, "Pages": ["office"],
+      "Handler": "Office-MeasureWordStart", "TitleKey": "action.office.measure-word-start", "DescriptionKey": "action.office.measure-word-start.desc" },
+    { "Id": "office.measure-word-start-safe", "Category": "Office", "Risk": "Low", "Modifies": false, "RequiresAdmin": false, "Reversible": true,
+      "RequiresWindows": true, "BlockedWhenManaged": false, "MinBuild": 10240, "Editions": null, "Pages": ["office"],
+      "Handler": "Office-MeasureWordStartSafe", "TitleKey": "action.office.measure-word-start-safe", "DescriptionKey": "action.office.measure-word-start-safe.desc" },
+    { "Id": "office.open-repair", "Category": "Office", "Risk": "Low", "Modifies": false, "RequiresAdmin": false, "Reversible": true,
+      "RequiresWindows": true, "BlockedWhenManaged": false, "MinBuild": 10240, "Editions": null, "Pages": ["office"],
+      "Handler": "Office-OpenRepair", "TitleKey": "action.office.open-repair", "DescriptionKey": "action.office.open-repair.desc" }
+  ]
+}
