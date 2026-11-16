@@ -1,0 +1,87 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="WinCare Enterprise" Width="1240" Height="800" MinWidth="980" MinHeight="620"
+        WindowStartupLocation="CenterScreen" UseLayoutRounding="True"
+        Background="{DynamicResource Brush.Bg}" Foreground="{DynamicResource Brush.Text}"
+        FontFamily="Segoe UI" FontSize="13">
+    <!-- Theme, styles and strings are merged at runtime by WinCare.UI.psm1. No x:Class, no inline event handlers. -->
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="232"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Sidebar -->
+        <Border Grid.Column="0" Background="{DynamicResource Brush.Surface}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,1,0">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Margin="20,20,20,16">
+                    <TextBlock Text="WinCare" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource Brush.Text}"/>
+                    <TextBlock Text="Enterprise" Style="{DynamicResource Text.Muted}"/>
+                </StackPanel>
+                <TextBlock x:Name="VersionText" DockPanel.Dock="Bottom" Margin="20,8,20,16" Style="{DynamicResource Text.Muted}"/>
+                <ListBox x:Name="NavList" Background="Transparent" BorderThickness="0"
+                         ItemContainerStyle="{DynamicResource Nav.Item}" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         AutomationProperties.Name="Navigation">
+                    <ListBoxItem Tag="overview"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE80F;" FontFamily="{DynamicResource Font.Icons}" Width="26" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource str.nav.overview}"/></StackPanel></ListBoxItem>
+                    <ListBoxItem Tag="diagnostics"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE9D9;" FontFamily="{DynamicResource Font.Icons}" Width="26" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource str.nav.diagnostics}"/></StackPanel></ListBoxItem>
+                    <ListBoxItem Tag="quick"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE945;" FontFamily="{DynamicResource Font.Icons}" Width="26" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource str.nav.quick}"/></StackPanel></ListBoxItem>
+                    <ListBoxItem Tag="advanced"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE9E9;" FontFamily="{DynamicResource Font.Icons}" Width="26" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource str.nav.advanced}"/></StackPanel></ListBoxItem>
+                    <ListBoxItem Tag="storage"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xEDA2;" FontFamily="{DynamicResource Font.Icons}" Width="26" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource str.nav.storage}"/></StackPanel></ListBoxItem>
+                    <ListBoxItem Tag="startup"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE7E8;" FontFamily="{DynamicResource Font.Icons}" Width="26" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource str.nav.startup}"/></StackPanel></ListBoxItem>
+                    <ListBoxItem Tag="office"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8A5;" FontFamily="{DynamicResource Font.Icons}" Width="26" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource str.nav.office}"/></StackPanel></ListBoxItem>
+                    <ListBoxItem Tag="integrity"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE90F;" FontFamily="{DynamicResource Font.Icons}" Width="26" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource str.nav.integrity}"/></StackPanel></ListBoxItem>
+                    <ListBoxItem Tag="security"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xEA18;" FontFamily="{DynamicResource Font.Icons}" Width="26" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource str.nav.security}"/></StackPanel></ListBoxItem>
+                    <ListBoxItem Tag="reports"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE81C;" FontFamily="{DynamicResource Font.Icons}" Width="26" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource str.nav.reports}"/></StackPanel></ListBoxItem>
+                    <ListBoxItem Tag="settings"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE713;" FontFamily="{DynamicResource Font.Icons}" Width="26" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource str.nav.settings}"/></StackPanel></ListBoxItem>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <!-- Main area -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Border Grid.Row="0" Padding="24,16" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1">
+                <DockPanel LastChildFill="True">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Style="{DynamicResource Badge}"><TextBlock x:Name="ProfileBadge" Style="{DynamicResource Text.Muted}"/></Border>
+                        <Border Style="{DynamicResource Badge}"><TextBlock x:Name="AdminBadge" Style="{DynamicResource Text.Muted}"/></Border>
+                        <Border Style="{DynamicResource Badge}"><TextBlock x:Name="ManagedBadge" Style="{DynamicResource Text.Muted}"/></Border>
+                        <Button x:Name="RefreshButton" Style="{DynamicResource Button.Primary}" Content="{DynamicResource str.common.refresh}" Margin="8,0,8,0"/>
+                        <Button x:Name="CancelButton" Style="{DynamicResource Button.Secondary}" Content="{DynamicResource str.common.cancel}" IsEnabled="False" Margin="0"/>
+                    </StackPanel>
+                    <TextBlock x:Name="PageTitle" Style="{DynamicResource Text.H1}" VerticalAlignment="Center"/>
+                </DockPanel>
+            </Border>
+
+            <!-- Page host -->
+            <ContentControl x:Name="PageHost" Grid.Row="1" Focusable="False"/>
+
+            <!-- Status + log console -->
+            <Border Grid.Row="2" Background="{DynamicResource Brush.Surface}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0">
+                <StackPanel>
+                    <ProgressBar x:Name="BusyBar" IsIndeterminate="True" Height="3" Visibility="Hidden"
+                                 Foreground="{DynamicResource Brush.Accent}" Background="Transparent" BorderThickness="0"/>
+                    <Expander x:Name="LogExpander" Margin="16,4,16,8" Foreground="{DynamicResource Brush.Text}">
+                        <Expander.Header>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{DynamicResource str.console.title}" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text}"/>
+                                <TextBlock x:Name="StatusText" Margin="16,0,0,0" Style="{DynamicResource Text.Muted}"/>
+                            </StackPanel>
+                        </Expander.Header>
+                        <TextBox x:Name="LogBox" Height="150" Margin="0,6,0,0" IsReadOnly="True" TextWrapping="NoWrap"
+                                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                                 FontFamily="Consolas" FontSize="12" Padding="6"
+                                 Background="{DynamicResource Brush.SurfaceAlt}" Foreground="{DynamicResource Brush.Text}"
+                                 BorderBrush="{DynamicResource Brush.Border}" AutomationProperties.Name="Log"/>
+                    </Expander>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

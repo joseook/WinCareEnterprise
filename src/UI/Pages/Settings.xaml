@@ -1,0 +1,34 @@
+<ScrollViewer xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" VerticalScrollBarVisibility="Auto" Focusable="False">
+    <StackPanel Margin="24,20,24,24" MaxWidth="820" HorizontalAlignment="Left">
+        <Border Style="{DynamicResource Card}"><StackPanel>
+            <TextBlock Text="{DynamicResource str.settings.theme}" Style="{DynamicResource Text.H2}"/>
+            <StackPanel Orientation="Horizontal">
+                <RadioButton x:Name="ThemeDark" GroupName="Theme" Style="{DynamicResource Choice}" Content="{DynamicResource str.settings.theme-dark}"/>
+                <RadioButton x:Name="ThemeLight" GroupName="Theme" Style="{DynamicResource Choice}" Content="{DynamicResource str.settings.theme-light}"/>
+            </StackPanel>
+        </StackPanel></Border>
+        <Border Style="{DynamicResource Card}"><StackPanel>
+            <TextBlock Text="{DynamicResource str.settings.language}" Style="{DynamicResource Text.H2}"/>
+            <StackPanel Orientation="Horizontal">
+                <RadioButton x:Name="LangPt" GroupName="Lang" Style="{DynamicResource Choice}" Content="Português (Brasil)"/>
+                <RadioButton x:Name="LangEn" GroupName="Lang" Style="{DynamicResource Choice}" Content="English (US)"/>
+            </StackPanel>
+        </StackPanel></Border>
+        <Border Style="{DynamicResource Card}"><StackPanel>
+            <TextBlock Text="{DynamicResource str.settings.profile}" Style="{DynamicResource Text.H2}"/>
+            <RadioButton x:Name="ProfileDiagnostico" GroupName="Profile" Style="{DynamicResource Choice}" Content="{DynamicResource str.profile.Diagnostico}"/>
+            <TextBlock Text="{DynamicResource str.profile.Diagnostico.desc}" Style="{DynamicResource Text.Muted}" Margin="22,0,0,8"/>
+            <RadioButton x:Name="ProfileConservador" GroupName="Profile" Style="{DynamicResource Choice}" Content="{DynamicResource str.profile.Conservador}"/>
+            <TextBlock Text="{DynamicResource str.profile.Conservador.desc}" Style="{DynamicResource Text.Muted}" Margin="22,0,0,8"/>
+            <RadioButton x:Name="ProfileCorporativo" GroupName="Profile" Style="{DynamicResource Choice}" Content="{DynamicResource str.profile.Corporativo}"/>
+            <TextBlock Text="{DynamicResource str.profile.Corporativo.desc}" Style="{DynamicResource Text.Muted}" Margin="22,0,0,8"/>
+            <RadioButton x:Name="ProfileAvancado" GroupName="Profile" Style="{DynamicResource Choice}" Content="{DynamicResource str.profile.Avancado}"/>
+            <TextBlock Text="{DynamicResource str.profile.Avancado.desc}" Style="{DynamicResource Text.Muted}" Margin="22,0,0,8"/>
+            <TextBlock Text="{DynamicResource str.settings.profile-note}" Style="{DynamicResource Text.Muted}" Margin="0,8,0,0"/>
+        </StackPanel></Border>
+        <Border Style="{DynamicResource Card}"><StackPanel>
+            <TextBlock Text="{DynamicResource str.settings.about}" Style="{DynamicResource Text.H2}"/>
+            <TextBlock x:Name="AboutText" Style="{DynamicResource Text.Body}"/>
+        </StackPanel></Border>
+    </StackPanel>
+</ScrollViewer>

@@ -1,0 +1,14 @@
+<ScrollViewer xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" VerticalScrollBarVisibility="Auto" Focusable="False">
+    <StackPanel Margin="24,20,24,24">
+        <TextBlock Text="{DynamicResource str.reports.intro}" Style="{DynamicResource Text.Muted}" Margin="0,0,0,12"/>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+            <Button x:Name="ExportJsonButton" Style="{DynamicResource Button.Primary}" Content="{DynamicResource str.reports.export-json}"/>
+            <Button x:Name="ExportHtmlButton" Style="{DynamicResource Button.Primary}" Content="{DynamicResource str.reports.export-html}"/>
+            <Button x:Name="OpenFolderButton" Style="{DynamicResource Button.Secondary}" Content="{DynamicResource str.reports.open-folder}"/>
+        </StackPanel>
+        <TextBlock x:Name="ReportsFolderText" Style="{DynamicResource Text.Muted}" Margin="0,0,0,4"/>
+        <TextBlock x:Name="LogFileText" Style="{DynamicResource Text.Muted}" Margin="0,0,0,12"/>
+        <TextBlock Text="{DynamicResource str.reports.history}" Style="{DynamicResource Text.H2}"/>
+        <DataGrid x:Name="HistoryGrid" Style="{DynamicResource Grid.Data}" MaxHeight="360"/>
+    </StackPanel>
+</ScrollViewer>

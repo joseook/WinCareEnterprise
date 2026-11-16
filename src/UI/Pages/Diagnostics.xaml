@@ -1,0 +1,14 @@
+<ScrollViewer xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" VerticalScrollBarVisibility="Auto" Focusable="False">
+    <StackPanel Margin="24,20,24,24">
+        <TextBlock Text="{DynamicResource str.diagnostics.intro}" Style="{DynamicResource Text.Muted}" Margin="0,0,0,12"/>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+            <Button x:Name="RunDiagnosticButton" Style="{DynamicResource Button.Primary}" Content="{DynamicResource str.diagnostics.run}"/>
+            <TextBlock x:Name="LastRunText" Style="{DynamicResource Text.Muted}" VerticalAlignment="Center"/>
+        </StackPanel>
+        <TextBlock Text="{DynamicResource str.diagnostics.system}" Style="{DynamicResource Text.H2}"/>
+        <DataGrid x:Name="SystemGrid" Style="{DynamicResource Grid.Data}" Margin="0,0,0,12"/>
+        <TextBlock Text="{DynamicResource str.diagnostics.errors}" Style="{DynamicResource Text.H2}"/>
+        <TextBlock x:Name="ErrorsEmptyText" Text="{DynamicResource str.diagnostics.errors-empty}" Style="{DynamicResource Text.Muted}"/>
+        <DataGrid x:Name="ErrorsGrid" Style="{DynamicResource Grid.Data}" Margin="0,0,0,12"/>
+    </StackPanel>
+</ScrollViewer>

@@ -1,0 +1,9 @@
+<ScrollViewer xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" VerticalScrollBarVisibility="Auto" Focusable="False">
+    <StackPanel Margin="24,20,24,24">
+        <TextBlock Text="{DynamicResource str.startup.intro}" Style="{DynamicResource Text.Muted}" Margin="0,0,0,12"/>
+        <TextBlock Text="{DynamicResource str.startup.processes}" Style="{DynamicResource Text.H2}"/>
+        <DataGrid x:Name="ProcessGrid" Style="{DynamicResource Grid.Data}" MaxHeight="420" Margin="0,0,0,12"/>
+        <TextBlock Text="{DynamicResource str.startup.entries}" Style="{DynamicResource Text.H2}"/>
+        <DataGrid x:Name="StartupGrid" Style="{DynamicResource Grid.Data}" MaxHeight="420" Margin="0,0,0,12"/>
+    </StackPanel>
+</ScrollViewer>

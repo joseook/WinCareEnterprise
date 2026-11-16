@@ -1,0 +1,74 @@
+<ScrollViewer xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" VerticalScrollBarVisibility="Auto" Focusable="False">
+    <StackPanel Margin="24,20,24,24">
+        <TextBlock Text="{DynamicResource str.overview.subtitle}" Style="{DynamicResource Text.Muted}" Margin="0,0,0,16"/>
+        <WrapPanel x:Name="Cards">
+            <Border Style="{DynamicResource Card.Fixed}"><StackPanel>
+                <TextBlock Text="{DynamicResource str.card.windows}" Style="{DynamicResource Text.Muted}"/>
+                <TextBlock x:Name="WinFamilyText" Text="-" Style="{DynamicResource Text.CardValue}"/>
+                <TextBlock x:Name="WinDetailText" Text="-" Style="{DynamicResource Text.Muted}"/>
+            </StackPanel></Border>
+            <Border Style="{DynamicResource Card.Fixed}"><StackPanel>
+                <TextBlock Text="{DynamicResource str.card.cpu}" Style="{DynamicResource Text.Muted}"/>
+                <TextBlock x:Name="CpuUsageText" Text="-" Style="{DynamicResource Text.CardValue}"/>
+                <ProgressBar x:Name="CpuBar" Style="{DynamicResource Bar.Usage}"/>
+                <TextBlock x:Name="CpuDetailText" Text="-" Style="{DynamicResource Text.Muted}" Margin="0,6,0,0"/>
+            </StackPanel></Border>
+            <Border Style="{DynamicResource Card.Fixed}"><StackPanel>
+                <TextBlock Text="{DynamicResource str.card.memory}" Style="{DynamicResource Text.Muted}"/>
+                <TextBlock x:Name="RamUsageText" Text="-" Style="{DynamicResource Text.CardValue}"/>
+                <ProgressBar x:Name="RamBar" Style="{DynamicResource Bar.Usage}"/>
+                <TextBlock x:Name="RamDetailText" Text="-" Style="{DynamicResource Text.Muted}" Margin="0,6,0,0"/>
+            </StackPanel></Border>
+            <Border Style="{DynamicResource Card.Fixed}"><StackPanel>
+                <TextBlock Text="{DynamicResource str.card.disk}" Style="{DynamicResource Text.Muted}"/>
+                <TextBlock x:Name="DiskUsageText" Text="-" Style="{DynamicResource Text.CardValue}"/>
+                <ProgressBar x:Name="DiskBar" Style="{DynamicResource Bar.Usage}"/>
+                <TextBlock x:Name="DiskDetailText" Text="-" Style="{DynamicResource Text.Muted}" Margin="0,6,0,0"/>
+            </StackPanel></Border>
+            <Border Style="{DynamicResource Card.Fixed}"><StackPanel>
+                <TextBlock Text="{DynamicResource str.card.uptime}" Style="{DynamicResource Text.Muted}"/>
+                <TextBlock x:Name="UptimeText" Text="-" Style="{DynamicResource Text.CardValue}"/>
+                <TextBlock x:Name="RebootText" Text="-" Style="{DynamicResource Text.Muted}"/>
+            </StackPanel></Border>
+            <Border Style="{DynamicResource Card.Fixed}"><StackPanel>
+                <TextBlock Text="{DynamicResource str.card.integrity}" Style="{DynamicResource Text.Muted}"/>
+                <TextBlock Text="{DynamicResource str.card.integrity-notrun}" Style="{DynamicResource Text.CardValue}"/>
+                <TextBlock Text="{DynamicResource str.card.integrity-hint}" Style="{DynamicResource Text.Muted}"/>
+            </StackPanel></Border>
+            <Border Style="{DynamicResource Card.Fixed}"><StackPanel>
+                <TextBlock Text="{DynamicResource str.card.management}" Style="{DynamicResource Text.Muted}"/>
+                <TextBlock x:Name="ManagedText" Text="-" Style="{DynamicResource Text.CardValue}"/>
+                <TextBlock x:Name="ManagedDetailText" Text="-" Style="{DynamicResource Text.Muted}"/>
+            </StackPanel></Border>
+        </WrapPanel>
+
+        <TextBlock Text="{DynamicResource str.overview.findings}" Style="{DynamicResource Text.H2}"/>
+        <TextBlock x:Name="FindingsEmptyText" Text="{DynamicResource str.overview.findings-empty}" Style="{DynamicResource Text.Muted}"/>
+        <ItemsControl x:Name="FindingsList" Focusable="False">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Style="{DynamicResource Card}" Margin="0,0,0,8" Padding="14,10">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Left" Width="90" FontWeight="SemiBold" Text="{Binding SeverityText}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{DynamicResource Brush.Info}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Severity}" Value="Warning"><Setter Property="Foreground" Value="{DynamicResource Brush.Warning}"/></DataTrigger>
+                                            <DataTrigger Binding="{Binding Severity}" Value="Critical"><Setter Property="Foreground" Value="{DynamicResource Brush.Critical}"/></DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <StackPanel>
+                                <TextBlock Text="{Binding Title}" Style="{DynamicResource Text.Body}" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding Recommendation}" Style="{DynamicResource Text.Muted}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Text="{DynamicResource str.overview.method}" Style="{DynamicResource Text.Muted}" Margin="0,12,0,0"/>
+    </StackPanel>
+</ScrollViewer>

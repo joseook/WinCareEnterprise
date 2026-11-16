@@ -1,0 +1,16 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- WinCare Dark theme: color tokens by role. Text/background pairs are checked for WCAG AA in tests/Theme.Tests.ps1. -->
+    <SolidColorBrush x:Key="Brush.Bg" Color="#0F1115"/>
+    <SolidColorBrush x:Key="Brush.Surface" Color="#171A21"/>
+    <SolidColorBrush x:Key="Brush.SurfaceAlt" Color="#1F2430"/>
+    <SolidColorBrush x:Key="Brush.Border" Color="#2C3342"/>
+    <SolidColorBrush x:Key="Brush.Text" Color="#E6E9EF"/>
+    <SolidColorBrush x:Key="Brush.Muted" Color="#A3ACBB"/>
+    <SolidColorBrush x:Key="Brush.Accent" Color="#2F6FDB"/>
+    <SolidColorBrush x:Key="Brush.OnAccent" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="Brush.Critical" Color="#FF6B6F"/>
+    <SolidColorBrush x:Key="Brush.Warning" Color="#E8B04B"/>
+    <SolidColorBrush x:Key="Brush.Info" Color="#7AB2FF"/>
+    <SolidColorBrush x:Key="Brush.Ok" Color="#3DBE8B"/>
+</ResourceDictionary>
