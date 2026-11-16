@@ -69,3 +69,28 @@ Regras que não mudam:
 Histórico (`Add-WcHistory`, uma linha JSON por item): além dos campos F3, `reversibility`, `restorePoint {status, reason, sequenceNumber, creationTime, description, detail}`, `freeBytesDelta`, `comparison[]`, `measurementErrors`; `rollbackAvailable` = `RollbackData` ou ponto utilizável.
 Relatório de ações: `New-WcActionReport -Plan -Results` ou `-History (Read-WcHistory ...)` → `Export-WcActionReport -Format Json|Html` (HTML codificado, sem scripts, com CSP).
 Listagem somente leitura: `Get-WcRestorePoint` → `Status Ok|Unavailable|Error`, `Reason`, `ProtectionEnabled`, `FrequencyMinutes`, `Points[] (SequenceNumber, Created, Description, Type)`.
+
+## 6. Páginas de análise (F6+: processos, saúde, aplicativos, rede)
+
+Cada módulo de área exporta **uma** função de dados para a sua página, executada pela interface num job em segundo plano:
+
+```powershell
+Get-Wc<Area>PageData [-Context <New-WcContext>]  ->  [pscustomobject]@{
+    PageId   = 'processes' | 'health' | 'apps' | 'network'
+    Sections = @( [pscustomobject]@{
+        Id       = 'top-memory'                  # único na página
+        TitleKey = 'section.processes.top-memory' # chave de idioma do título
+        NoteKey  = 'section.processes.top-memory.note' # opcional: texto explicativo
+        Rows     = @( [pscustomobject]@{ ... } )  # colunas = nomes de propriedade; cabeçalho = col.<Propriedade>
+        Severity = 'Info' | 'Warning' | 'Critical' # opcional: destaque da seção
+    } )
+    Findings = @( achados no formato de New-WcFinding )  # opcional
+    Errors   = @( 'seção: mensagem' )                     # coleta que falhou não derruba a página
+}
+```
+
+Regras:
+- Somente leitura. Nunca lança exceção: falha de uma seção vai para `Errors`.
+- Linhas já formatadas para exibição (bytes legíveis, datas locais curtas). Valores numéricos para ordenação podem ir numa coluna extra cujo nome termina em `Raw` (a interface a esconde).
+- Toda coluna `X` precisa de `col.X` nos dois idiomas (fragmento do módulo).
+- As ações da área vão no catálogo com `"Pages": ["<página>"]` e aparecem embaixo das seções, com prévia e confirmação como nas demais.

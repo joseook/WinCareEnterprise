@@ -400,7 +400,7 @@ function Test-WcActionDefinition {
     }
     if ($Action.ContainsKey('Pages')) {
         foreach ($pg in @($Action.Pages)) {
-            if (@('quick', 'advanced', 'integrity', 'office', 'storage', 'startup') -notcontains $pg) { $errors += "invalid page '$pg'" }
+            if (@('quick', 'advanced', 'integrity', 'office', 'storage', 'startup', 'processes', 'health', 'apps', 'network') -notcontains $pg) { $errors += "invalid page '$pg'" }
         }
     }
     if ($Action.ContainsKey('MinBuild') -and $null -ne $Action.MinBuild -and $Action.MinBuild -isnot [int] -and $Action.MinBuild -isnot [long]) {
