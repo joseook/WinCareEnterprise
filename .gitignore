@@ -3,3 +3,4 @@ TestResults/
 validation-results/
 tools/
 *.log
+.claude/

@@ -11,7 +11,8 @@
       WinCare-<v>.manifest.json.sig      RSA-3072 PKCS#1 v1.5 SHA-256 signature
       install.ps1                        bootstrapper with this version as default
       ONE-LINER.txt                      the command for technicians (pins install.ps1 SHA-256)
-    And dist/site/ (index.html + install.ps1) for the short URL.
+    And dist/site/ (index.html, install.ps1, run) for the short URL; `run` is the
+    `irm .../run | iex` launcher (pins install.ps1 by hash, runs it as a file).
     Before finishing, it runs the generated install.ps1 against the package in a
     temporary cache (-VerifyOnly) - the release is only produced if that passes.
     Publishing (GitHub Release, site) is a separate step.
@@ -37,6 +38,16 @@ foreach ($d in $out, $stage) { if (Test-Path -LiteralPath $d) { Remove-Item -Lit
 New-Item -ItemType Directory -Path $out, $stage -Force | Out-Null
 foreach ($item in 'src', 'README.md', 'LICENSE', 'SECURITY.md') { Copy-Item -LiteralPath (Join-Path $repo $item) -Destination $stage -Recurse }
 
+# install.ps1 = committed bootstrapper + default version. Built first so its hash can
+# go inside the signed package (Core/release.json, used by "Run as administrator").
+$boot = [System.IO.File]::ReadAllText((Join-Path $repo 'bootstrap/Install-WinCare.ps1'))
+$boot = $boot.Replace("`$script:WcbDefaultVersion = ''", "`$script:WcbDefaultVersion = '$version'")
+$install = Join-Path $out 'install.ps1'
+[System.IO.File]::WriteAllText($install, $boot.Replace("`r`n", "`n").Replace("`n", "`r`n"), $utf8)
+$installHash = (Get-FileHash -LiteralPath $install -Algorithm SHA256).Hash
+$releaseInfo = [ordered]@{ version = $version; installUri = ('https://github.com/joseook/WinCareEnterprise/releases/download/v{0}/install.ps1' -f $version); installSha256 = $installHash }
+[System.IO.File]::WriteAllText((Join-Path $stage 'src/Core/release.json'), (ConvertTo-Json -InputObject $releaseInfo), $utf8)
+
 $files = foreach ($f in Get-ChildItem -LiteralPath $stage -Recurse -File | Sort-Object FullName) {
     [ordered]@{ path = $f.FullName.Substring($stage.Length + 1).Replace('\', '/'); sha256 = (Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256).Hash }
 }
@@ -57,13 +68,6 @@ $manPath = Join-Path $out "WinCare-$version.manifest.json"
 & openssl dgst -sha256 -sign $KeyPath -out ($manPath + '.sig') $manPath
 if ($LASTEXITCODE -ne 0) { throw 'openssl signing failed.' }
 
-# install.ps1 = committed bootstrapper + default version.
-$boot = [System.IO.File]::ReadAllText((Join-Path $repo 'bootstrap/Install-WinCare.ps1'))
-$boot = $boot.Replace("`$script:WcbDefaultVersion = ''", "`$script:WcbDefaultVersion = '$version'")
-$install = Join-Path $out 'install.ps1'
-[System.IO.File]::WriteAllText($install, $boot.Replace("`r`n", "`n").Replace("`n", "`r`n"), $utf8)
-$installHash = (Get-FileHash -LiteralPath $install -Algorithm SHA256).Hash
-
 # Self-test: the generated install.ps1 must accept this exact package.
 $tmpCache = Join-Path ([System.IO.Path]::GetTempPath()) ('wincare-selftest-' + [guid]::NewGuid().ToString('N'))
 try {
@@ -80,8 +84,15 @@ $site = Join-Path $OutputDirectory 'site'
 if (Test-Path -LiteralPath $site) { Remove-Item -LiteralPath $site -Recurse -Force }
 New-Item -ItemType Directory -Path $site -Force | Out-Null
 Copy-Item -LiteralPath $install -Destination (Join-Path $site 'install.ps1')
+# irm | iex launcher: pins install.ps1 by hash and runs it as a file.
+$run = [System.IO.File]::ReadAllText((Join-Path $repo 'site/run.template.ps1'), $utf8)
+$run = $run.Replace('{{VERSION}}', $version).Replace('{{INSTALL_SHA256}}', $installHash).Replace('{{SITE_URL}}', $SiteUrl)
+$runErr = $null
+[void][System.Management.Automation.Language.Parser]::ParseInput($run, [ref]$null, [ref]$runErr)
+if (@($runErr).Count -gt 0) { throw 'run.ps1 does not parse.' }
+foreach ($runName in 'run', 'run.ps1') { [System.IO.File]::WriteAllText((Join-Path $site $runName), $run.Replace("`r`n", "`n").Replace("`n", "`r`n"), $utf8) }
 $tpl = [System.IO.File]::ReadAllText((Join-Path $repo 'site/index.template.html'), $utf8)
-$html = $tpl.Replace('{{VERSION}}', $version).Replace('{{ONELINER}}', [System.Net.WebUtility]::HtmlEncode($oneLiner)).Replace('{{INSTALL_SHA256}}', $installHash).Replace('{{ZIP_SHA256}}', $manifest.package.sha256)
+$html = $tpl.Replace('{{SITE_URL}}', $SiteUrl).Replace('{{VERSION}}', $version).Replace('{{ONELINER}}', [System.Net.WebUtility]::HtmlEncode($oneLiner)).Replace('{{INSTALL_SHA256}}', $installHash).Replace('{{ZIP_SHA256}}', $manifest.package.sha256)
 [System.IO.File]::WriteAllText((Join-Path $site 'index.html'), $html, $utf8)
 $host1 = ([uri]$SiteUrl).Host
 [System.IO.File]::WriteAllText((Join-Path $site 'CNAME'), $host1, $utf8)
