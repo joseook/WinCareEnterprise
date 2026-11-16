@@ -5,7 +5,7 @@
   "nav.network": "Network",
   "actions.intro.processes": "Memory and CPU per process, background programs and leak signals. Read-only; ending a process asks for confirmation.",
   "actions.intro.health": "Recent critical events, devices with problems, disk health, startup tasks and services, battery and Windows Update. Read-only.",
-  "actions.intro.apps": "Installed programs, available updates (winget) and Store apps with problems. Only what you select is updated or reset.",
+  "actions.intro.apps": "Installed programs, available updates (winget) and Store apps with problems. Only what you select is updated or reset. To update or reset, select the rows in the matching table (Ctrl+click for several updates) before running.",
   "actions.intro.network": "Adapters, connectivity, DNS and proxy. Network repairs ask for confirmation and respect VPN and organization policies.",
   "analysis.run": "Analyze now",
   "analysis.running": "Analyzing…",

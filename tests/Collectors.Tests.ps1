@@ -165,3 +165,16 @@ Describe 'Security signals' {
         $p.DefenderRealTime | Should -BeTrue
     }
 }
+
+Describe 'Storage enum names (CIM number or Storage-module text)' {
+    It 'maps <Value> to <Expected>' -ForEach @(
+        @{ Value = 4; Expected = 'SSD' }
+        @{ Value = '3'; Expected = 'HDD' }
+        @{ Value = 'SSD'; Expected = 'SSD' }
+        @{ Value = 'Unspecified'; Expected = 'Unknown' }
+        @{ Value = 0; Expected = 'Unknown' }
+        @{ Value = $null; Expected = 'Unknown' }
+    ) {
+        ConvertTo-WcStorageEnumName -Value $Value -Map @{ 3 = 'HDD'; 4 = 'SSD'; 5 = 'SCM' } | Should -Be $Expected
+    }
+}

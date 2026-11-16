@@ -14,6 +14,22 @@
 $script:MediaTypeMap = @{ 3 = 'HDD'; 4 = 'SSD'; 5 = 'SCM' }
 $script:BusTypeMap = @{ 1 = 'SCSI'; 3 = 'ATA'; 7 = 'USB'; 8 = 'RAID'; 10 = 'SAS'; 11 = 'SATA'; 12 = 'SD'; 15 = 'FileBackedVirtual'; 17 = 'NVMe' }
 
+function ConvertTo-WcStorageEnumName {
+    <# Pure: CIM enum value (int, numeric text or already a name) -> name from $Map; else $Default. #>
+    [CmdletBinding()]
+    param($Value, [hashtable] $Map, [string] $Default = 'Unknown')
+    if ($null -eq $Value) { return $Default }
+    $n = 0
+    if ([int]::TryParse(([string]$Value).Trim(), [ref]$n)) {
+        if ($Map.ContainsKey($n)) { return $Map[$n] }
+        return $Default
+    }
+    $text = ([string]$Value).Trim()
+    foreach ($v in $Map.Values) { if ($v -eq $text) { return $v } }
+    if ($text -eq 'Unspecified' -or -not $text) { return $Default }
+    return $text
+}
+
 function ConvertTo-WcVolumeInfo {
     [CmdletBinding()]
     param(
@@ -46,10 +62,10 @@ function ConvertTo-WcVolumeInfo {
         $media = 'Unknown'; $bus = 'Unknown'; $model = $null
         if ($diskByLetter.ContainsKey($id) -and $physById.ContainsKey($diskByLetter[$id])) {
             $pd = $physById[$diskByLetter[$id]]
-            $mt = Get-WcObjectValue $pd 'MediaType'
-            if ($null -ne $mt -and $script:MediaTypeMap.ContainsKey([int]$mt)) { $media = $script:MediaTypeMap[[int]$mt] }
-            $bt = Get-WcObjectValue $pd 'BusType'
-            if ($null -ne $bt -and $script:BusTypeMap.ContainsKey([int]$bt)) { $bus = $script:BusTypeMap[[int]$bt] }
+            # Number from raw CIM, or text once the Windows 'Storage' module is loaded in the
+            # session (its type data turns MediaType/BusType into names, e.g. 'SSD', 'NVMe').
+            $media = ConvertTo-WcStorageEnumName -Value (Get-WcObjectValue $pd 'MediaType') -Map $script:MediaTypeMap -Default $media
+            $bus = ConvertTo-WcStorageEnumName -Value (Get-WcObjectValue $pd 'BusType') -Map $script:BusTypeMap -Default $bus
             $model = Get-WcObjectValue $pd 'FriendlyName'
         }
         $sizeOut = $null; if ($size) { $sizeOut = [double]$size }
@@ -81,4 +97,4 @@ function Get-WcVolumeInfo {
     return (ConvertTo-WcVolumeInfo -LogicalDisk $ld -Partition $parts -PhysicalDisk $phys -SystemDrive $sys)
 }
 
-Export-ModuleMember -Function @('ConvertTo-WcVolumeInfo', 'Get-WcVolumeInfo')
+Export-ModuleMember -Function @('ConvertTo-WcVolumeInfo', 'Get-WcVolumeInfo', 'ConvertTo-WcStorageEnumName')

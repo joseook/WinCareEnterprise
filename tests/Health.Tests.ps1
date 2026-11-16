@@ -13,6 +13,8 @@ BeforeAll {
             Set-Item -Path ("function:global:$name") -Value ([scriptblock]::Create($body))
         }
     }
+    # On Windows, mocking the CDXML cmdlets (Get-PhysicalDisk...) needs their enum types loaded.
+    if (Get-Module -ListAvailable -Name Storage -ErrorAction SilentlyContinue) { Import-Module Storage -ErrorAction SilentlyContinue }
     Import-WcTestModules -Name @('System', 'Health')
     $script:Tmp = New-WcTestDir
     Initialize-WcLog -Path (Join-Path $script:Tmp 'health.jsonl') | Out-Null

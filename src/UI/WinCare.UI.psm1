@@ -437,6 +437,7 @@ function Show-WcAnalysis {
             $g = New-Object System.Windows.Controls.DataGrid
             $g.SetResourceReference([System.Windows.FrameworkElement]::StyleProperty, 'Grid.Data')
             $g.MaxHeight = 360; $g.Margin = '0,0,0,14'; $g.Tag = [string]$sec.Id
+            if ([string]$sec.Id -eq 'winget-updates') { $g.SelectionMode = 'Extended' }
             Register-WcGrid -Grid $g
             [void]$host0.Children.Add($g)
             Set-WcGridRows -Grid $g -Rows @($sec.Rows)
@@ -496,6 +497,31 @@ function Get-WcSelectedProcessRow {
         }
     }
     return $null
+}
+
+# action id -> (section id, column) whose selected rows feed $ctx.Selection.
+$script:WcSelectionMap = @{
+    'apps.winget-upgrade' = @{ Section = 'winget-updates'; Column = 'PackageId' }
+    'apps.store-reset'    = @{ Section = 'store-problems'; Column = 'PackageFullName' }
+    'apps.open-repair'    = @{ Section = 'installed'; Column = 'Name' }
+}
+
+function Get-WcActionSelection {
+    param([string] $PageId)
+    $out = @{}
+    if (-not $script:Ui.AnalysisGrids.ContainsKey($PageId)) { return $out }
+    foreach ($actionId in $script:WcSelectionMap.Keys) {
+        $m = $script:WcSelectionMap[$actionId]
+        $g = $script:Ui.AnalysisGrids[$PageId][$m.Section]
+        if (-not $g) { continue }
+        $vals = @(foreach ($row in @($g.SelectedItems)) {
+                if ($null -eq $row) { continue }
+                $pp = $row.PSObject.Properties[$m.Column]
+                if ($pp -and $pp.Value) { [string]$pp.Value }
+            })
+        if ($vals.Count -gt 0) { $out[$actionId] = $vals }
+    }
+    return $out
 }
 
 function Get-WcSelectedAnalysisRow {
@@ -662,6 +688,9 @@ function Start-WcActionRun {
     }
     $ctx = Get-WcUiContext
     if ($endTarget -and $ids -contains 'process.end') { Set-WcProcessEndRequest -Context $ctx -ProcessId $endTarget.Pid -ProcessName $endTarget.Name -Force:$endForce | Out-Null }
+    # Row-based actions (CONTRATO sec. 7): values are copied from the selected rows only.
+    $sel = Get-WcActionSelection -PageId $PageId
+    if ($sel.Count -gt 0) { $ctx.Selection = $sel }
     $jobArgs = @{ CatalogPath = $script:Ui.CatalogPath; Ids = $ids; Confirmed = $confirmed; Profile = $script:Ui.Settings.Profile; Context = $ctx; DryRun = [bool]$DryRun; PageId = $PageId; HistoryDir = (Join-Path (Get-WcDataRoot) 'history') }
     Start-WcUiJob -Name ('actions-' + $PageId) -Arguments $jobArgs -Script {
         param($a)

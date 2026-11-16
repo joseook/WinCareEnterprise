@@ -74,7 +74,7 @@ Describe 'Real WPF (no window shown)' -Tag 'Windows' {
         $w = Import-WcXaml -Path (Join-Path $script:SrcRoot 'UI/MainWindow.xaml')
         $w.Resources.MergedDictionaries.Add((Import-WcXaml (Join-Path $script:SrcRoot 'UI/Themes/Dark.xaml')))
         $w.Resources.MergedDictionaries.Add((Import-WcXaml (Join-Path $script:SrcRoot 'UI/Themes/Styles.xaml')))
-        $w.FindName('NavList').Items.Count | Should -Be 11
+        $w.FindName('NavList').Items.Count | Should -Be 15
         foreach ($f in Get-ChildItem (Join-Path $script:SrcRoot 'UI/Pages') -Filter *.xaml) {
             $w.FindName('PageHost').Content = Import-WcXaml -Path $f.FullName
         }
