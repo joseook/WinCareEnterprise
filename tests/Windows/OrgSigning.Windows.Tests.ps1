@@ -45,7 +45,8 @@ Describe 'Organization signing (AllSigned)' -Tag 'Windows' -Skip:(-not ($script:
         @($script:result.Problems).Count | Should -Be 0 -Because ($script:result.Problems -join '; ')
         $script:result.ScriptCount | Should -BeGreaterThan 10
         (Get-AuthenticodeSignature (Join-Path $script:signed 'src\WinCare.psd1')).Status | Should -Be 'Valid'
-        (Get-AuthenticodeSignature (Join-Path $script:signed 'WinCare.cat')).Status | Should -Be 'Valid'
+        (Get-AuthenticodeSignature (Join-Path $script:signed 'WinCare.FileHashes.ps1')).Status | Should -Be 'Valid'
+        @(Test-WcOrgFileHashes -Root $script:signed).Count | Should -Be 0
     }
     It 'AllSigned process loads the signed copy' {
         $m = Join-Path $script:signed 'src\WinCare.psd1'
@@ -57,9 +58,11 @@ Describe 'Organization signing (AllSigned)' -Tag 'Windows' -Skip:(-not ($script:
         $out = & $script:ps -NoProfile -NonInteractive -ExecutionPolicy AllSigned -Command "try { Import-Module '$m' -DisableNameChecking -ErrorAction Stop; 'LOADED' } catch { 'BLOCKED: ' + `$_.Exception.Message }" 2>&1
         ($out -join "`n") | Should -Match 'BLOCKED'
     }
-    It 'catalog detects a modified non-script file' {
-        $j = Join-Path $script:signed 'src\Core\actions.json'
-        Add-Content -LiteralPath $j -Value ' '
-        [string](Test-FileCatalog -CatalogFilePath (Join-Path $script:signed 'WinCare.cat') -Path $script:signed -FilesToSkip 'WinCare.cat') | Should -Not -Be 'Valid'
+    It 'hash list detects a modified non-script file and an extra file' {
+        Add-Content -LiteralPath (Join-Path $script:signed 'src\Core\actions.json') -Value ' '
+        Set-Content -LiteralPath (Join-Path $script:signed 'src\extra.txt') -Value 'x'
+        $p = @(Test-WcOrgFileHashes -Root $script:signed)
+        ($p -join ';') | Should -Match 'Modified file: src/Core/actions.json'
+        ($p -join ';') | Should -Match 'Extra file: src/extra.txt'
     }
 }

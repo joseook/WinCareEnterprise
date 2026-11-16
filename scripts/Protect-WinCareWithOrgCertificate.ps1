@@ -11,8 +11,8 @@
        this fails.
     2. Copies the verified files to -OutputDirectory and signs every .ps1/.psm1/.psd1
        with the given certificate (SHA-256, optional RFC 3161 timestamp).
-    3. Creates WinCare.cat (New-FileCatalog) covering ALL files (JSON catalog,
-       XAML, localization) and signs it, so Test-FileCatalog can audit them.
+    3. Writes WinCare.FileHashes.ps1 (SHA-256 of ALL files: JSON catalog, XAML,
+       localization) and signs it; Test-WcOrgFileHashes audits the folder.
     4. Checks every signature is Valid on this machine and writes
        WINCARE-ORG-SIGNED.json (source manifest hash, signer, date).
     Deploy the output folder to an admin-only location (e.g. Program Files) with
@@ -52,6 +52,28 @@ function Get-WcOrgCertificate {
     throw "Code-signing certificate $tp not found in CurrentUser\My or LocalMachine\My."
 }
 
+$script:WcOrgHashFile = 'WinCare.FileHashes.ps1'
+
+function Test-WcOrgFileHashes {
+    <# Audit: signed hash list is Valid and every file matches (no missing/extra/modified). Returns problems. #>
+    param([Parameter(Mandatory = $true)][string] $Root)
+    $list = Join-Path $Root $script:WcOrgHashFile
+    if (-not (Test-Path -LiteralPath $list)) { return @("$($script:WcOrgHashFile) not found.") }
+    $sig = Get-AuthenticodeSignature -LiteralPath $list
+    if ([string]$sig.Status -ne 'Valid') { return @("$($script:WcOrgHashFile) signature: $($sig.Status)") }
+    $expected = Import-PowerShellDataFile -LiteralPath $list
+    $problems = @()
+    $seen = @{}
+    foreach ($f in @(Get-ChildItem -LiteralPath $Root -Recurse -File | Where-Object { $_.Name -ne $script:WcOrgHashFile })) {
+        $rel = $f.FullName.Substring($Root.TrimEnd('\', '/').Length + 1).Replace('\', '/')
+        $seen[$rel] = $true
+        if (-not $expected.ContainsKey($rel)) { $problems += "Extra file: $rel"; continue }
+        if ((Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256).Hash -ne $expected[$rel]) { $problems += "Modified file: $rel" }
+    }
+    foreach ($k in $expected.Keys) { if (-not $seen.ContainsKey($k)) { $problems += "Missing file: $k" } }
+    return $problems
+}
+
 function Protect-WcFolderWithCertificate {
     <# Signs scripts + a catalog of every file under $Root. Returns the list of problems (empty = OK). #>
     param(
@@ -67,15 +89,25 @@ function Protect-WcFolderWithCertificate {
         $r = Set-AuthenticodeSignature @p
         if ([string]$r.Status -ne 'Valid') { $problems += ('{0}: {1} {2}' -f $f.FullName, $r.Status, $r.StatusMessage) }
     }
-    $cat = Join-Path $Root 'WinCare.cat'
-    if (Test-Path -LiteralPath $cat) { Remove-Item -LiteralPath $cat -Force }
-    New-FileCatalog -Path $Root -CatalogFilePath $cat -CatalogVersion 2.0 | Out-Null
-    $p = @{ FilePath = $cat; Certificate = $Certificate; HashAlgorithm = 'SHA256' }
+    # Hash list of EVERY file (JSON catalog, XAML, localization), stored as a signed
+    # .ps1 data file: Authenticode protects it and it loads even under AllSigned.
+    # (New-FileCatalog was the first choice but fails on Windows PowerShell 5.1.)
+    $list = Join-Path $Root $script:WcOrgHashFile
+    $lines = New-Object System.Collections.Generic.List[string]
+    $lines.Add('# WinCare file hashes (SHA-256), signed by the organization. Data only.')
+    $lines.Add('@{')
+    foreach ($f in @(Get-ChildItem -LiteralPath $Root -Recurse -File | Where-Object { $_.Name -ne $script:WcOrgHashFile } | Sort-Object FullName)) {
+        $rel = $f.FullName.Substring($Root.TrimEnd('\', '/').Length + 1).Replace('\', '/')
+        if ($rel -notmatch '^[A-Za-z0-9._/ -]+$') { $problems += "Unexpected characters in file name: $rel"; continue }
+        $lines.Add(("    '{0}' = '{1}'" -f $rel, (Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256).Hash))
+    }
+    $lines.Add('}')
+    [System.IO.File]::WriteAllText($list, (($lines -join "`r`n") + "`r`n"), (New-Object System.Text.UTF8Encoding($false)))
+    $p = @{ FilePath = $list; Certificate = $Certificate; HashAlgorithm = 'SHA256' }
     if ($TimestampServer) { $p.TimestampServer = $TimestampServer }
     $r = Set-AuthenticodeSignature @p
-    if ([string]$r.Status -ne 'Valid') { $problems += ('WinCare.cat: {0} {1}' -f $r.Status, $r.StatusMessage) }
-    $check = Test-FileCatalog -CatalogFilePath $cat -Path $Root -FilesToSkip 'WinCare.cat'
-    if ([string]$check -ne 'Valid') { $problems += "Test-FileCatalog: $check" }
+    if ([string]$r.Status -ne 'Valid') { $problems += ('{0}: {1} {2}' -f $script:WcOrgHashFile, $r.Status, $r.StatusMessage) }
+    $problems += @(Test-WcOrgFileHashes -Root $Root)
     return [pscustomobject]@{ Problems = $problems; ScriptCount = $scripts.Count }
 }
 
@@ -129,5 +161,5 @@ if ($res.Problems.Count -gt 0) {
     $res.Problems | ForEach-Object { Write-Warning $_ }
     throw 'Some signatures are not Valid on this machine (is the certificate chain trusted?). See WINCARE-ORG-SIGNED.json.'
 }
-Write-Host "Signed $($res.ScriptCount) scripts + WinCare.cat with $($cert.Subject) ($($cert.Thumbprint))."
+Write-Host "Signed $($res.ScriptCount) scripts + WinCare.FileHashes.ps1 with $($cert.Subject) ($($cert.Thumbprint))."
 Write-Host "Output: $OutputDirectory"

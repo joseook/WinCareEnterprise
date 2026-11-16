@@ -112,7 +112,8 @@ Describe 'Comparison (pure)' {
     }
     It 'normalizes hashtables and one level of nested arrays into metrics' {
         $m = ConvertTo-WcMetricList -InputObject @(, @(@{ Name = 'FreeBytes'; Target = 'C:'; Value = 1 }, @{ Target = 'no-name' }, $null)) -Source System
-        $m.Count | Should -Be 1
+        @($m).Count | Should -Be 1   # @(): a single PSCustomObject has no .Count on PS 5.1
+        $m = @($m)
         $m[0].Source | Should -Be 'System'
         $m[0].Unit | Should -Be 'Bytes'
     }

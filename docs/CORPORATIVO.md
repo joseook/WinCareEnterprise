@@ -36,7 +36,7 @@ Certificado público de assinatura de código é pago. Em empresa, o caminho gra
 
 O script:
 1. Verifica o release igual ao `install.ps1` (assinatura RSA do manifesto, hash do zip e de cada arquivo, nenhum arquivo extra). Se falhar, não assina nada.
-2. Assina todos os `.ps1/.psm1/.psd1` (SHA-256) e cria e assina `WinCare.cat` cobrindo **todos** os arquivos (catálogo de ações, XAML, idiomas).
+2. Assina todos os `.ps1/.psm1/.psd1` (SHA-256) e grava e assina `WinCare.FileHashes.ps1` com o SHA-256 de **todos** os arquivos (catálogo de ações, XAML, idiomas). O `New-FileCatalog` do Windows PowerShell 5.1 falhou neste pacote no CI, por isso o catálogo `.cat` não é usado.
 3. Confere que tudo ficou `Valid` e grava `WINCARE-ORG-SIGNED.json` (hash do manifesto original, assinante, data).
 
 Depois, distribua a pasta para um local só de administradores (ex.: `C:\Program Files\WinCare\0.3.0`) via Intune, ConfigMgr ou GPO, e crie o atalho:
@@ -46,7 +46,7 @@ powershell.exe -NoProfile -STA -File "C:\Program Files\WinCare\0.3.0\src\Start-W
 ```
 
 - **AppLocker/WDAC:** crie regra de *publisher* para o certificado da organização (não por caminho).
-- **Auditoria:** `Test-FileCatalog -CatalogFilePath WinCare.cat -Path <pasta> -FilesToSkip WinCare.cat` deve retornar `Valid`.
+- **Auditoria:** `. .\scripts\Protect-WinCareWithOrgCertificate.ps1; Test-WcOrgFileHashes -Root <pasta>` não deve listar nada (confere a assinatura da lista e acusa arquivo alterado, extra ou faltando).
 - Depois de reassinado, o pacote não bate mais com o manifesto RSA (os arquivos mudaram); a assinatura Authenticode da organização passa a ser o controle de integridade.
 
 Validação: `tests/Windows/OrgSigning.Windows.Tests.ps1` roda no Windows real (CI) com um certificado descartável e prova que um processo `AllSigned` carrega a cópia assinada e rejeita a não assinada.
