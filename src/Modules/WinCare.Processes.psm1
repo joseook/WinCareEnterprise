@@ -743,6 +743,7 @@ function New-WcProcSection {
     $s = [ordered]@{ Id = $Id; TitleKey = ('section.processes.' + $Id); NoteKey = $NoteKey }
     $s.Rows = @($Rows)
     $s.Severity = $Severity
+    $s.NoteOnly = ($Id -eq 'no-ram-cleaner')
     return [pscustomobject]$s
 }
 

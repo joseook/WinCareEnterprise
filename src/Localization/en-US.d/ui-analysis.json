@@ -12,5 +12,7 @@
   "analysis.done": "Analysis finished at {0}.",
   "analysis.errors": "Parts that could not be read:",
   "analysis.unavailable": "Analysis not available in this version.",
-  "analysis.actions": "Actions"
+  "analysis.actions": "Actions",
+  "processes.select-first": "First select the process in one of the tables above (click its row), then tick \"End process\" again.",
+  "processes.confirm-end": "End \"{0}\" (PID {1})?\n\nYes: ask the program to close (it may save work).\nNo: force it to end (unsaved data is lost).\nCancel: do nothing."
 }

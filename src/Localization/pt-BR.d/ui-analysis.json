@@ -12,5 +12,7 @@
   "analysis.done": "Análise concluída às {0}.",
   "analysis.errors": "Partes que não puderam ser lidas:",
   "analysis.unavailable": "Análise indisponível nesta versão.",
-  "analysis.actions": "Ações"
+  "analysis.actions": "Ações",
+  "processes.select-first": "Selecione primeiro o processo numa das tabelas acima (clique na linha) e marque \"Encerrar processo\" de novo.",
+  "processes.confirm-end": "Encerrar \"{0}\" (PID {1})?\n\nSim: pedir para o programa fechar (pode salvar o trabalho).\nNão: forçar o encerramento (dados não salvos são perdidos).\nCancelar: não fazer nada."
 }

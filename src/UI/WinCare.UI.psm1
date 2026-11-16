@@ -432,6 +432,8 @@ function Show-WcAnalysis {
                 $n.SetResourceReference([System.Windows.FrameworkElement]::StyleProperty, 'Text.Muted')
                 [void]$host0.Children.Add($n)
             }
+            $noProp = $sec.PSObject.Properties['NoteOnly']
+            if ($noProp -and $noProp.Value) { continue }
             $g = New-Object System.Windows.Controls.DataGrid
             $g.SetResourceReference([System.Windows.FrameworkElement]::StyleProperty, 'Grid.Data')
             $g.MaxHeight = 360; $g.Margin = '0,0,0,14'; $g.Tag = [string]$sec.Id
@@ -478,6 +480,22 @@ function Start-WcPageAnalysis {
             Show-WcAnalysis -PageId $result.PageId -Data $result.Data -ErrorText $e2
         }
     }
+}
+
+function Get-WcSelectedProcessRow {
+    <# First selected row with a ProcPid among the page's section grids: @{ Name; Pid } or $null. #>
+    param([string] $PageId)
+    if (-not $script:Ui.AnalysisGrids.ContainsKey($PageId)) { return $null }
+    foreach ($g in $script:Ui.AnalysisGrids[$PageId].Values) {
+        $row = $g.SelectedItem
+        if ($null -eq $row) { continue }
+        $pp = $row.PSObject.Properties['ProcPid']
+        if ($pp -and $pp.Value) {
+            $pid0 = 0
+            if ([int]::TryParse([string]$pp.Value, [ref]$pid0) -and $pid0 -gt 0) { return @{ Name = [string]$row.Name; Pid = $pid0 } }
+        }
+    }
+    return $null
 }
 
 function Get-WcSelectedAnalysisRow {
@@ -608,11 +626,29 @@ function Start-WcActionRun {
     $p = $script:Ui.Pages[$PageId]
     $ids = Get-WcSelectedActionIds -Page $p
     if ($ids.Count -eq 0) { [System.Windows.MessageBox]::Show((Get-WcString 'actions.nothing-selected'), 'WinCare Enterprise') | Out-Null; return }
+    # process.end acts on the row selected in one of the page's tables.
+    $endTarget = $null; $endForce = $false
+    if ($ids -contains 'process.end') {
+        $endTarget = Get-WcSelectedProcessRow -PageId $PageId
+        if ($null -eq $endTarget) {
+            [System.Windows.MessageBox]::Show($script:Ui.Window, (Get-WcString 'processes.select-first'), 'WinCare Enterprise', 'OK', 'Information') | Out-Null
+            $ids = @($ids | Where-Object { $_ -ne 'process.end' })
+            if ($ids.Count -eq 0) { return }
+        }
+    }
     $confirmed = @()
     if (-not $DryRun) {
         # Individual confirmation on the UI thread, before any background work starts.
         foreach ($id in $ids) {
             $a = @($script:Ui.Catalog | Where-Object { $_.Id -eq $id })[0]
+            if ($id -eq 'process.end') {
+                # Yes = ask the program to close; No = force end; Cancel = skip.
+                $msg = Get-WcString 'processes.confirm-end' -Arguments @($endTarget.Name, $endTarget.Pid)
+                $ans = [System.Windows.MessageBox]::Show($script:Ui.Window, $msg, (Get-WcString 'actions.confirm-title'), 'YesNoCancel', 'Warning', 'Cancel')
+                if ([string]$ans -eq 'Yes') { $confirmed += $id }
+                elseif ([string]$ans -eq 'No') { $confirmed += $id; $endForce = $true }
+                continue
+            }
             $needs = ([bool]$a.Modifies -or [string]$a.Risk -ne 'None')
             if (-not $needs) { $confirmed += $id; continue }
             $desc = ''; if ($a.ContainsKey('DescriptionKey') -and $a.DescriptionKey) { $desc = Get-WcString $a.DescriptionKey }
@@ -625,6 +661,7 @@ function Start-WcActionRun {
         $ids = $confirmed
     }
     $ctx = Get-WcUiContext
+    if ($endTarget -and $ids -contains 'process.end') { Set-WcProcessEndRequest -Context $ctx -ProcessId $endTarget.Pid -ProcessName $endTarget.Name -Force:$endForce | Out-Null }
     $jobArgs = @{ CatalogPath = $script:Ui.CatalogPath; Ids = $ids; Confirmed = $confirmed; Profile = $script:Ui.Settings.Profile; Context = $ctx; DryRun = [bool]$DryRun; PageId = $PageId; HistoryDir = (Join-Path (Get-WcDataRoot) 'history') }
     Start-WcUiJob -Name ('actions-' + $PageId) -Arguments $jobArgs -Script {
         param($a)
