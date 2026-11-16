@@ -107,79 +107,6 @@
   "profile.Corporativo.desc": "Low risk, and blocks any action sensitive to managed policies even when management is not detected.",
   "profile.Avancado": "Advanced",
   "profile.Avancado.desc": "Extra actions for technicians, always with individual confirmation.",
-  "planned.note": "This page runs nothing in this version. Actions will only be enabled after testing in a virtual machine and validation on real Windows.",
-  "planned.quick.phase": "Phase F3",
-  "planned.quick.title": "Analyze and optimize",
-  "planned.quick.text": "Diagnostics first, then a list of recommended actions. Each action will have description, risk, compatibility, preview (dry-run), confirmation, result, log and rollback when possible.",
-  "planned.quick.items": [
-    {
-      "title": "Controlled cleanup of temporary files",
-      "detail": "User and system TEMP folders, with a preview of what will be removed and the space recovered."
-    },
-    {
-      "title": "Free space and pending reboot check",
-      "detail": "Already available read-only in Overview."
-    },
-    {
-      "title": "Startup and process analysis",
-      "detail": "Already available read-only; recommendations arrive in F3."
-    }
-  ],
-  "planned.advanced.phase": "Phase F3/F5",
-  "planned.advanced.title": "Individual actions for technicians",
-  "planned.advanced.text": "One action at a time, never a bundle. No registry tweaks without justification, documentation and tests. Essential services and security features are never disabled.",
-  "planned.advanced.items": [
-    {
-      "title": "Storage",
-      "detail": "Optimization via Optimize-Volume (TRIM on SSD, defrag on HDD only)."
-    },
-    {
-      "title": "Network diagnostics",
-      "detail": "Read-only tests (DNS, gateway, connectivity)."
-    },
-    {
-      "title": "Apps and services",
-      "detail": "Only with an allowlist, a compatible profile and confirmation."
-    }
-  ],
-  "planned.office.phase": "Phase F4",
-  "planned.office.title": "Microsoft Office diagnostics",
-  "planned.office.text": "Focus on slow Word startup: installation, version and architecture detection, add-ins, safe-mode test and launch-time measurement with a documented method. Never deletes documents, templates, profiles or credentials.",
-  "planned.office.items": [
-    {
-      "title": "Installation detection",
-      "detail": "Click-to-Run and MSI, version, channel and architecture."
-    },
-    {
-      "title": "Add-ins",
-      "detail": "Read-only listing; the safe-mode test (winword /safe) will be guided."
-    },
-    {
-      "title": "Official repair",
-      "detail": "Access to Microsoft Quick/Online Repair, never automatic."
-    }
-  ],
-  "planned.integrity.phase": "Phase F3",
-  "planned.integrity.title": "Official integrity tools",
-  "planned.integrity.text": "The commands below require administrator rights and will only run after explicit confirmation, with output shown and logged. Nothing runs automatically.",
-  "planned.integrity.items": [
-    {
-      "title": "sfc /scannow",
-      "detail": "Scans and repairs protected system files. Requires administrator."
-    },
-    {
-      "title": "DISM /Online /Cleanup-Image /ScanHealth",
-      "detail": "Checks the component store for corruption. Requires administrator."
-    },
-    {
-      "title": "DISM /Online /Cleanup-Image /RestoreHealth",
-      "detail": "Repairs the component store; may use Windows Update. Requires administrator."
-    },
-    {
-      "title": "chkdsk C: /scan",
-      "detail": "Online NTFS file system scan without dismounting the volume. Requires administrator."
-    }
-  ],
   "col.Item": "Item",
   "col.Value": "Value",
   "col.Source": "Source",
@@ -239,5 +166,31 @@
   "cli.running": "Running read-only diagnostics...",
   "cli.saved": "Report saved to: {0}",
   "cli.findings": "Alerts: {0}",
-  "cli.errors": "Sections with failures: {0}"
+  "cli.errors": "Sections with failures: {0}",
+  "actions.empty": "No actions available on this page in this version.",
+  "actions.preview": "Preview (dry-run)",
+  "actions.run": "Run selected",
+  "actions.results": "Result",
+  "actions.details": "Details",
+  "actions.nothing-selected": "Select at least one action.",
+  "actions.risk.None": "Read-only",
+  "actions.risk.Low": "Low risk",
+  "actions.risk.Medium": "Medium risk",
+  "actions.risk.High": "High risk",
+  "actions.admin": "requires administrator",
+  "actions.irreversible": "irreversible",
+  "actions.reversible": "reversible",
+  "actions.blocked": "Blocked: {0}",
+  "actions.profile-hint": "Current profile: {0}. Actions that change the system are blocked in the Diagnostics profile - change it in Settings.",
+  "actions.confirm-title": "Confirm action",
+  "actions.confirm-text": "Run now?\n\n{0}\n{1}\n\nRisk: {2}\n{3}\n\nRecommended: run Preview first.",
+  "actions.intro.quick": "Low-risk maintenance actions. Use Preview to see exactly what would happen; nothing runs without your confirmation, one action at a time.",
+  "actions.intro.advanced": "Individual actions for technicians. Each one shows risk, whether it needs administrator rights and whether it is reversible.",
+  "actions.intro.integrity": "Official Windows tools (SFC, DISM, CHKDSK). They require administrator rights; output is shown below and in the console.",
+  "actions.intro.office": "Microsoft Office diagnostics focused on slow Word startup. Nothing is deleted; repairs only open the official tool.",
+  "col.Action": "Action",
+  "col.Summary": "Summary",
+  "col.Freed": "Freed",
+  "col.Mode": "Mode",
+  "reports.actions-history": "Action history (previews and runs)"
 }

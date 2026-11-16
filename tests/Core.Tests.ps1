@@ -236,3 +236,20 @@ Describe 'Parameter validation' {
         Test-WcDriveLetter 'C:\; rm' | Should -BeFalse
     }
 }
+
+Describe 'Action history' {
+    It 'appends and reads back plan results with before/after data' {
+        $dir = Join-Path $script:Tmp 'history'
+        $plan = [pscustomobject]@{ Id = 'p1'; Profile = 'Conservador' }
+        $res = @(
+            [pscustomobject]@{ ActionId = 'a.b'; Mode = 'Execute'; Status = 'Succeeded'; Error = $null; Output = (New-WcActionResult -Summary 'ok' -BytesBefore 100 -BytesAfter 40 -BytesFreed 60) }
+            [pscustomobject]@{ ActionId = 'a.c'; Mode = 'DryRun'; Status = 'Previewed'; Error = $null; Output = 'text' }
+        )
+        Add-WcHistory -Directory $dir -Plan $plan -Results $res | Should -Be 2
+        $h = Read-WcHistory -Directory $dir
+        $h.Count | Should -Be 2
+        $h[0].bytesFreed | Should -Be 60
+        $h[0].rollbackAvailable | Should -BeFalse
+        $h[1].status | Should -Be 'Previewed'
+    }
+}

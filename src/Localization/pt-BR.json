@@ -107,79 +107,6 @@
   "profile.Corporativo.desc": "Baixo risco e bloqueio de qualquer ação sensível a políticas gerenciadas, mesmo sem detectar gerenciamento.",
   "profile.Avancado": "Avançado",
   "profile.Avancado.desc": "Ações adicionais para técnicos, sempre com confirmação individual.",
-  "planned.note": "Esta página não executa nada nesta versão. As ações só serão liberadas depois de testadas em máquina virtual e validadas em Windows real.",
-  "planned.quick.phase": "Fase F3",
-  "planned.quick.title": "Analisar e otimizar",
-  "planned.quick.text": "Diagnóstico primeiro, depois uma lista de ações recomendadas. Cada ação terá descrição, risco, compatibilidade, prévia (dry-run), confirmação, resultado, log e reversão quando possível.",
-  "planned.quick.items": [
-    {
-      "title": "Limpeza controlada de temporários",
-      "detail": "Pastas TEMP do usuário e do sistema, com prévia do que será removido e do espaço recuperado."
-    },
-    {
-      "title": "Verificação de espaço e reinicialização pendente",
-      "detail": "Já disponível em leitura na Visão geral."
-    },
-    {
-      "title": "Análise de inicialização e processos",
-      "detail": "Já disponível em leitura; recomendações chegam na F3."
-    }
-  ],
-  "planned.advanced.phase": "Fase F3/F5",
-  "planned.advanced.title": "Ações individuais para técnicos",
-  "planned.advanced.text": "Ações uma a uma, nunca em pacote. Sem tweaks de registro sem justificativa, documentação e testes. Serviços essenciais e recursos de segurança não são desativados.",
-  "planned.advanced.items": [
-    {
-      "title": "Armazenamento",
-      "detail": "Otimização via Optimize-Volume (TRIM em SSD, desfragmentação só em HDD)."
-    },
-    {
-      "title": "Diagnóstico de rede",
-      "detail": "Testes de leitura (DNS, gateway, conectividade)."
-    },
-    {
-      "title": "Aplicativos e serviços",
-      "detail": "Somente com lista permitida, perfil compatível e confirmação."
-    }
-  ],
-  "planned.office.phase": "Fase F4",
-  "planned.office.title": "Diagnóstico do Microsoft Office",
-  "planned.office.text": "Foco na abertura lenta do Word: detecção da instalação, versão e arquitetura, suplementos, teste em modo seguro e medição de abertura com método documentado. Nunca apaga documentos, modelos, perfis ou credenciais.",
-  "planned.office.items": [
-    {
-      "title": "Detecção da instalação",
-      "detail": "Click-to-Run e MSI, versão, canal e arquitetura."
-    },
-    {
-      "title": "Suplementos",
-      "detail": "Listagem somente leitura; o teste em modo seguro (winword /safe) será guiado."
-    },
-    {
-      "title": "Reparo oficial",
-      "detail": "Acesso ao Reparo Rápido/Online da Microsoft, nunca automático."
-    }
-  ],
-  "planned.integrity.phase": "Fase F3",
-  "planned.integrity.title": "Ferramentas oficiais de integridade",
-  "planned.integrity.text": "Os comandos abaixo exigem administrador e só serão executados com confirmação explícita, com saída exibida e registrada. Nada é executado automaticamente.",
-  "planned.integrity.items": [
-    {
-      "title": "sfc /scannow",
-      "detail": "Verifica e repara arquivos protegidos do sistema. Requer administrador."
-    },
-    {
-      "title": "DISM /Online /Cleanup-Image /ScanHealth",
-      "detail": "Verifica corrupção do repositório de componentes. Requer administrador."
-    },
-    {
-      "title": "DISM /Online /Cleanup-Image /RestoreHealth",
-      "detail": "Repara o repositório de componentes; pode usar o Windows Update. Requer administrador."
-    },
-    {
-      "title": "chkdsk C: /scan",
-      "detail": "Verificação online do sistema de arquivos NTFS, sem desmontar o volume. Requer administrador."
-    }
-  ],
   "col.Item": "Item",
   "col.Value": "Valor",
   "col.Source": "Fonte",
@@ -239,5 +166,31 @@
   "cli.running": "Executando diagnóstico somente leitura...",
   "cli.saved": "Relatório salvo em: {0}",
   "cli.findings": "Alertas: {0}",
-  "cli.errors": "Seções com falha: {0}"
+  "cli.errors": "Seções com falha: {0}",
+  "actions.empty": "Nenhuma ação disponível nesta página nesta versão.",
+  "actions.preview": "Prévia (dry-run)",
+  "actions.run": "Executar selecionadas",
+  "actions.results": "Resultado",
+  "actions.details": "Detalhes",
+  "actions.nothing-selected": "Selecione ao menos uma ação.",
+  "actions.risk.None": "Somente leitura",
+  "actions.risk.Low": "Risco baixo",
+  "actions.risk.Medium": "Risco médio",
+  "actions.risk.High": "Risco alto",
+  "actions.admin": "requer administrador",
+  "actions.irreversible": "irreversível",
+  "actions.reversible": "reversível",
+  "actions.blocked": "Bloqueada: {0}",
+  "actions.profile-hint": "Perfil atual: {0}. Ações que alteram o sistema ficam bloqueadas no perfil Diagnóstico — troque em Configurações.",
+  "actions.confirm-title": "Confirmar ação",
+  "actions.confirm-text": "Executar agora?\n\n{0}\n{1}\n\nRisco: {2}\n{3}\n\nRecomendado: rode a Prévia antes.",
+  "actions.intro.quick": "Ações de manutenção de baixo risco. Use a Prévia para ver exatamente o que seria feito; nada é executado sem a sua confirmação, ação por ação.",
+  "actions.intro.advanced": "Ações individuais para técnicos. Cada uma mostra risco, se exige administrador e se é reversível.",
+  "actions.intro.integrity": "Ferramentas oficiais do Windows (SFC, DISM, CHKDSK). Exigem administrador; a saída aparece abaixo e no console.",
+  "actions.intro.office": "Diagnóstico do Microsoft Office com foco na abertura lenta do Word. Nada é apagado; reparos só abrem a ferramenta oficial.",
+  "col.Action": "Ação",
+  "col.Summary": "Resumo",
+  "col.Freed": "Liberado",
+  "col.Mode": "Modo",
+  "reports.actions-history": "Histórico de ações (prévias e execuções)"
 }

@@ -544,6 +544,51 @@ function Invoke-WcPlan {
     return $results
 }
 
+# ----------------------------------------------------------------- history --
+
+function Add-WcHistory {
+    <# Appends one JSON line per plan item to <Directory>/actions-YYYYMM.jsonl (local audit trail, before/after). #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string] $Directory,
+        [Parameter(Mandatory = $true)] $Plan,
+        [object[]] $Results = @()
+    )
+    if (-not (Test-Path -LiteralPath $Directory)) { New-Item -ItemType Directory -Path $Directory -Force | Out-Null }
+    $file = Join-Path $Directory ('actions-{0}.jsonl' -f (Get-Date).ToString('yyyyMM'))
+    $n = 0
+    foreach ($r in @($Results)) {
+        if ($null -eq $r) { continue }
+        $o = $r.Output
+        $summary = $null; $before = $null; $after = $null; $freed = $null; $exit = $null; $rollback = $false
+        if ($o -and $o.PSObject.Properties['Summary']) {
+            $summary = $o.Summary; $before = $o.BytesBefore; $after = $o.BytesAfter; $freed = $o.BytesFreed; $exit = $o.ExitCode
+            $rollback = ($null -ne $o.RollbackData)
+        }
+        $entry = [ordered]@{
+            time = (Get-Date).ToUniversalTime().ToString('o'); plan = $Plan.Id; profile = $Plan.Profile; computer = [System.Environment]::MachineName
+            action = $r.ActionId; mode = $r.Mode; status = $r.Status; summary = $summary; error = $r.Error
+            bytesBefore = $before; bytesAfter = $after; bytesFreed = $freed; exitCode = $exit; rollbackAvailable = $rollback
+        }
+        [System.IO.File]::AppendAllText($file, (ConvertTo-Json -InputObject $entry -Compress -Depth 4) + "`n", (New-Object System.Text.UTF8Encoding($false)))
+        $n++
+    }
+    return $n
+}
+
+function Read-WcHistory {
+    [CmdletBinding()]
+    param([Parameter(Mandatory = $true)][string] $Directory, [int] $Last = 200)
+    if (-not (Test-Path -LiteralPath $Directory)) { return @() }
+    $rows = @()
+    foreach ($f in @(Get-ChildItem -LiteralPath $Directory -Filter 'actions-*.jsonl' | Sort-Object Name)) {
+        foreach ($line in [System.IO.File]::ReadAllLines($f.FullName, [System.Text.Encoding]::UTF8)) {
+            if ($line.Trim()) { try { $rows += ($line | ConvertFrom-Json) } catch { Write-Verbose 'Skipping malformed history line.' } }
+        }
+    }
+    return @($rows | Select-Object -Last $Last)
+}
+
 # -------------------------------------------------------------- validation --
 
 function Test-WcPathWithin {
@@ -579,5 +624,5 @@ Export-ModuleMember -Function @(
     'Get-WcDefaultSettings', 'Test-WcSettings', 'Read-WcSettings', 'Save-WcSettings',
     'Get-WcProfile', 'Register-WcActionHandler', 'Get-WcActionHandlerNames', 'Clear-WcActionHandlers',
     'Test-WcActionDefinition', 'Import-WcActionCatalog', 'New-WcActionResult', 'New-WcContext', 'Test-WcActionAllowed',
-    'New-WcPlan', 'Invoke-WcPlan', 'Test-WcPathWithin', 'Test-WcDriveLetter'
+    'New-WcPlan', 'Invoke-WcPlan', 'Add-WcHistory', 'Read-WcHistory', 'Test-WcPathWithin', 'Test-WcDriveLetter'
 )

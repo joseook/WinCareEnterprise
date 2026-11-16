@@ -9,6 +9,8 @@
         <TextBlock x:Name="ReportsFolderText" Style="{DynamicResource Text.Muted}" Margin="0,0,0,4"/>
         <TextBlock x:Name="LogFileText" Style="{DynamicResource Text.Muted}" Margin="0,0,0,12"/>
         <TextBlock Text="{DynamicResource str.reports.history}" Style="{DynamicResource Text.H2}"/>
-        <DataGrid x:Name="HistoryGrid" Style="{DynamicResource Grid.Data}" MaxHeight="360"/>
+        <DataGrid x:Name="HistoryGrid" Style="{DynamicResource Grid.Data}" MaxHeight="360" Margin="0,0,0,12"/>
+        <TextBlock Text="{DynamicResource str.reports.actions-history}" Style="{DynamicResource Text.H2}"/>
+        <DataGrid x:Name="ActionsHistoryGrid" Style="{DynamicResource Grid.Data}" MaxHeight="360"/>
     </StackPanel>
 </ScrollViewer>

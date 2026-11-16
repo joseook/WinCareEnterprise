@@ -16,12 +16,12 @@ $script:Ui = $null
 $script:PageDefs = [ordered]@{
     overview    = @{ Xaml = 'Overview.xaml' }
     diagnostics = @{ Xaml = 'Diagnostics.xaml' }
-    quick       = @{ Xaml = 'Planned.xaml'; Planned = 'quick' }
-    advanced    = @{ Xaml = 'Planned.xaml'; Planned = 'advanced' }
+    quick       = @{ Xaml = 'Actions.xaml'; Actions = $true }
+    advanced    = @{ Xaml = 'Actions.xaml'; Actions = $true }
     storage     = @{ Xaml = 'Storage.xaml' }
     startup     = @{ Xaml = 'Startup.xaml' }
-    office      = @{ Xaml = 'Planned.xaml'; Planned = 'office' }
-    integrity   = @{ Xaml = 'Planned.xaml'; Planned = 'integrity' }
+    office      = @{ Xaml = 'Actions.xaml'; Actions = $true }
+    integrity   = @{ Xaml = 'Actions.xaml'; Actions = $true }
     security    = @{ Xaml = 'Security.xaml' }
     reports     = @{ Xaml = 'Reports.xaml' }
     settings    = @{ Xaml = 'Settings.xaml' }
@@ -160,6 +160,12 @@ function Update-WcBusyState {
     $w.FindName('RefreshButton').IsEnabled = -not $busy
     $page = $script:Ui.Pages['diagnostics']
     if ($page) { $page.FindName('RunDiagnosticButton').IsEnabled = -not $busy }
+    foreach ($id in @($script:PageDefs.Keys)) {
+        if ($script:PageDefs[$id].Actions -and $script:Ui.Pages[$id]) {
+            $script:Ui.Pages[$id].FindName('PreviewButton').IsEnabled = -not $busy
+            $script:Ui.Pages[$id].FindName('RunButton').IsEnabled = -not $busy
+        }
+    }
 }
 
 function Receive-WcLogQueue {
@@ -346,20 +352,150 @@ function Update-WcReportsPage {
             ForEach-Object { [pscustomobject]@{ File = $_.Name; Modified = $_.LastWriteTime.ToString('g'); Size = (Format-WcBytes $_.Length) } }
     }
     Set-WcGridRows -Grid $p.FindName('HistoryGrid') -Rows @($files)
+    $hist = foreach ($h in @(Read-WcHistory -Directory (Join-Path (Get-WcDataRoot) 'history') -Last 200)) {
+        $freed = ''; if ($null -ne $h.bytesFreed) { $freed = Format-WcBytes $h.bytesFreed }
+        [pscustomobject]@{ Modified = ([datetime]$h.time).ToLocalTime().ToString('g'); Action = (Get-WcString ('action.' + $h.action)); Mode = $h.mode; Status = $h.status; Summary = $h.summary; Freed = $freed }
+    }
+    [array]::Reverse($hist)
+    Set-WcGridRows -Grid $p.FindName('ActionsHistoryGrid') -Rows @($hist)
 }
 
-function Update-WcPlannedPage {
+function Get-WcUiContext {
+    $s = $script:Ui.Snapshot
+    $managed = $false; $build = 0; $edition = ''
+    if ($s -and $s.Security -and $s.Security.Management) { $managed = [bool]$s.Security.Management.IsManaged }
+    if ($s -and $s.System -and $s.System.Windows) { $build = [int]$s.System.Windows.Build; $edition = [string]$s.System.Windows.EditionId }
+    return (New-WcContext -IsAdmin $script:Ui.IsAdmin -IsManaged $managed -Build $build -EditionId $edition -IsWindows (Test-WcIsWindows))
+}
+
+function Get-WcPageActions {
+    param([string] $PageId)
+    return @($script:Ui.Catalog | Where-Object { $_.ContainsKey('Pages') -and (@($_.Pages) -contains $PageId) })
+}
+
+function Update-WcActionsPage {
     param([string] $PageId)
     $p = $script:Ui.Pages[$PageId]; if (-not $p) { return }
-    $key = $script:PageDefs[$PageId].Planned
-    $p.FindName('PlannedPhase').Text = Get-WcString ("planned.$key.phase")
-    $p.FindName('PlannedTitle').Text = Get-WcString ("planned.$key.title")
-    $p.FindName('PlannedText').Text = Get-WcString ("planned.$key.text")
-    $items = @()
-    foreach ($i in @(Get-WcRawString ("planned.$key.items"))) {
-        if ($i -is [System.Collections.IDictionary]) { $items += [pscustomobject]@{ Title = $i['title']; Detail = $i['detail'] } }
+    $p.FindName('ActionsIntro').Text = Get-WcString ("actions.intro.$PageId")
+    $prof = Get-WcProfile $script:Ui.Settings.Profile
+    if ($prof.AllowModify) { $p.FindName('ActionsProfileHint').Visibility = 'Collapsed' }
+    else {
+        $p.FindName('ActionsProfileHint').Visibility = 'Visible'
+        $p.FindName('ActionsProfileHint').Text = Get-WcString 'actions.profile-hint' -Arguments @((Get-WcString ('profile.' + $prof.Name)))
     }
-    $p.FindName('PlannedItems').ItemsSource = $items
+    $list = $p.FindName('ActionsList')
+    $list.Children.Clear()
+    $ctx = Get-WcUiContext
+    $actions = Get-WcPageActions -PageId $PageId
+    if ($actions.Count -gt 0) { $p.FindName('ActionsEmptyText').Visibility = 'Collapsed' } else { $p.FindName('ActionsEmptyText').Visibility = 'Visible' }
+    foreach ($a in $actions) {
+        $decision = Test-WcActionAllowed -Action $a -OperationProfile $prof -Context $ctx
+        $border = New-Object System.Windows.Controls.Border
+        $border.SetResourceReference([System.Windows.FrameworkElement]::StyleProperty, 'Card')
+        $border.Margin = '0,0,0,8'; $border.Padding = '14,10'
+        $cb = New-Object System.Windows.Controls.CheckBox
+        $cb.Tag = $a.Id
+        $cb.IsEnabled = $decision.Allowed
+        $cb.SetResourceReference([System.Windows.Controls.Control]::ForegroundProperty, 'Brush.Text')
+        $panel = New-Object System.Windows.Controls.StackPanel
+        $panel.Margin = '6,0,0,0'
+        $t = New-Object System.Windows.Controls.TextBlock
+        $t.Text = Get-WcString $a.TitleKey; $t.FontWeight = 'SemiBold'; $t.TextWrapping = 'Wrap'
+        $t.SetResourceReference([System.Windows.Controls.TextBlock]::ForegroundProperty, 'Brush.Text')
+        [void]$panel.Children.Add($t)
+        if ($a.ContainsKey('DescriptionKey') -and $a.DescriptionKey) {
+            $d = New-Object System.Windows.Controls.TextBlock
+            $d.Text = Get-WcString $a.DescriptionKey; $d.TextWrapping = 'Wrap'; $d.FontSize = 12
+            $d.SetResourceReference([System.Windows.Controls.TextBlock]::ForegroundProperty, 'Brush.Muted')
+            [void]$panel.Children.Add($d)
+        }
+        $tags = @(Get-WcString ('actions.risk.' + $a.Risk))
+        if ($a.RequiresAdmin) { $tags += Get-WcString 'actions.admin' }
+        if ($a.Modifies) { if ($a.Reversible) { $tags += Get-WcString 'actions.reversible' } else { $tags += Get-WcString 'actions.irreversible' } }
+        $m = New-Object System.Windows.Controls.TextBlock
+        $m.Text = ($tags -join '  |  '); $m.FontSize = 12; $m.Margin = '0,4,0,0'
+        $brush = 'Brush.Info'
+        if ($a.Risk -eq 'Medium' -or $a.Risk -eq 'High' -or ($a.Modifies -and -not $a.Reversible)) { $brush = 'Brush.Warning' }
+        $m.SetResourceReference([System.Windows.Controls.TextBlock]::ForegroundProperty, $brush)
+        [void]$panel.Children.Add($m)
+        if (-not $decision.Allowed) {
+            $r = New-Object System.Windows.Controls.TextBlock
+            $r.Text = Get-WcString 'actions.blocked' -Arguments @((@($decision.Reasons) | ForEach-Object { Get-WcString $_ }) -join ' ')
+            $r.TextWrapping = 'Wrap'; $r.FontSize = 12
+            $r.SetResourceReference([System.Windows.Controls.TextBlock]::ForegroundProperty, 'Brush.Muted')
+            [void]$panel.Children.Add($r)
+        }
+        $cb.Content = $panel
+        $border.Child = $cb
+        [void]$list.Children.Add($border)
+    }
+}
+
+function Get-WcSelectedActionIds {
+    param($Page)
+    return @($Page.FindName('ActionsList').Children | ForEach-Object { $_.Child } | Where-Object { $_.IsChecked -eq $true } | ForEach-Object { [string]$_.Tag })
+}
+
+function Show-WcActionResults {
+    param([string] $PageId, $Results)
+    $p = $script:Ui.Pages[$PageId]; if (-not $p) { return }
+    $rows = @(); $details = @(); $text = New-Object System.Text.StringBuilder
+    foreach ($r in @($Results)) {
+        if ($null -eq $r) { continue }
+        $summary = ''; $freed = ''
+        $o = $r.Output
+        if ($o -and $o.PSObject.Properties['Summary']) {
+            $summary = [string]$o.Summary
+            if ($null -ne $o.BytesFreed) { $freed = Format-WcBytes $o.BytesFreed }
+            foreach ($i in @($o.Items)) { if ($null -ne $i) { $details += $i } }
+            if ($o.Output) { [void]$text.AppendLine(('==== {0} ====' -f $r.ActionId)); [void]$text.AppendLine([string]$o.Output) }
+        }
+        elseif ($o) { $summary = [string]$o }
+        if ($r.Error) { $summary = ($summary + ' ' + $r.Error).Trim() }
+        $rows += [pscustomobject]@{ Action = (Get-WcString ('action.' + $r.ActionId)); Mode = $r.Mode; Status = $r.Status; Summary = $summary; Freed = $freed }
+    }
+    Set-WcGridRows -Grid $p.FindName('ResultGrid') -Rows $rows
+    Set-WcGridRows -Grid $p.FindName('DetailGrid') -Rows @($details | Select-Object -First 500)
+    $p.FindName('OutputBox').Text = $text.ToString()
+}
+
+function Start-WcActionRun {
+    param([string] $PageId, [switch] $DryRun)
+    $p = $script:Ui.Pages[$PageId]
+    $ids = Get-WcSelectedActionIds -Page $p
+    if ($ids.Count -eq 0) { [System.Windows.MessageBox]::Show((Get-WcString 'actions.nothing-selected'), 'WinCare Enterprise') | Out-Null; return }
+    $confirmed = @()
+    if (-not $DryRun) {
+        # Individual confirmation on the UI thread, before any background work starts.
+        foreach ($id in $ids) {
+            $a = @($script:Ui.Catalog | Where-Object { $_.Id -eq $id })[0]
+            $needs = ([bool]$a.Modifies -or [string]$a.Risk -ne 'None')
+            if (-not $needs) { $confirmed += $id; continue }
+            $desc = ''; if ($a.ContainsKey('DescriptionKey') -and $a.DescriptionKey) { $desc = Get-WcString $a.DescriptionKey }
+            $flag = ''; if ($a.Modifies -and -not $a.Reversible) { $flag = (Get-WcString 'actions.irreversible').ToUpperInvariant() }
+            $msg = Get-WcString 'actions.confirm-text' -Arguments @((Get-WcString $a.TitleKey), $desc, (Get-WcString ('actions.risk.' + $a.Risk)), $flag)
+            $ans = [System.Windows.MessageBox]::Show($script:Ui.Window, $msg, (Get-WcString 'actions.confirm-title'), 'YesNo', 'Warning', 'No')
+            if ($ans -eq 'Yes') { $confirmed += $id }
+        }
+        if ($confirmed.Count -eq 0) { return }
+        $ids = $confirmed
+    }
+    $ctx = Get-WcUiContext
+    $jobArgs = @{ CatalogPath = $script:Ui.CatalogPath; Ids = $ids; Confirmed = $confirmed; Profile = $script:Ui.Settings.Profile; Context = $ctx; DryRun = [bool]$DryRun; PageId = $PageId; HistoryDir = (Join-Path (Get-WcDataRoot) 'history') }
+    Start-WcUiJob -Name ('actions-' + $PageId) -Arguments $jobArgs -Script {
+        param($a)
+        $catalog = Import-WcActionCatalog -Path $a.CatalogPath
+        $plan = New-WcPlan -Catalog $catalog -ActionId $a.Ids -OperationProfile (Get-WcProfile $a.Profile) -Context $a.Context
+        $confirmed = $a.Confirmed
+        if ($a.DryRun) { $res = Invoke-WcPlan -Plan $plan -Context $a.Context -DryRun }
+        else { $res = Invoke-WcPlan -Plan $plan -Context $a.Context -ConfirmCallback { param($item) $confirmed -contains $item.ActionId }.GetNewClosure() }
+        Add-WcHistory -Directory $a.HistoryDir -Plan $plan -Results $res | Out-Null
+        [pscustomobject]@{ PageId = $a.PageId; Results = $res }
+    } -OnComplete {
+        param($result, $err)
+        if ($err) { Write-WcLog -Level Error -Category 'Actions' -Message $err | Out-Null }
+        if ($result) { Show-WcActionResults -PageId $result.PageId -Results $result.Results; Update-WcReportsPage }
+    }
 }
 
 function Update-WcSettingsPage {
@@ -385,7 +521,7 @@ function Update-WcAllPages {
     Update-WcSecurityPage
     Update-WcReportsPage
     Update-WcSettingsPage
-    foreach ($id in $script:PageDefs.Keys) { if ($script:PageDefs[$id].Planned) { Update-WcPlannedPage -PageId $id } }
+    foreach ($id in $script:PageDefs.Keys) { if ($script:PageDefs[$id].Actions) { Update-WcActionsPage -PageId $id } }
 }
 
 # ---------------------------------------------------------------- settings --
@@ -410,7 +546,7 @@ function Register-WcSettingsEvents {
                 Invoke-WcUiSafe {
                     $script:Ui.Settings.Profile = [string]$sender.Tag
                     Save-WcUiSettings
-                    Update-WcHeader
+                    Update-WcAllPages
                 }
             })
     }
@@ -436,8 +572,14 @@ function Get-WcPage {
         }
         'settings' { Register-WcSettingsEvents -Page $page }
     }
+    if ($def.Actions) {
+        $page.FindName('PreviewButton').Tag = $PageId
+        $page.FindName('RunButton').Tag = $PageId
+        $page.FindName('PreviewButton').Add_Click({ param($sender, $e) Invoke-WcUiSafe { Start-WcActionRun -PageId ([string]$sender.Tag) -DryRun } })
+        $page.FindName('RunButton').Add_Click({ param($sender, $e) Invoke-WcUiSafe { Start-WcActionRun -PageId ([string]$sender.Tag) } })
+    }
     # Localised column headers for every auto-generated DataGrid on the page.
-    foreach ($gridName in @('SystemGrid', 'ErrorsGrid', 'StorageGrid', 'ProcessGrid', 'StartupGrid', 'ManagementGrid', 'ProtectionGrid', 'HistoryGrid')) {
+    foreach ($gridName in @('SystemGrid', 'ErrorsGrid', 'StorageGrid', 'ProcessGrid', 'StartupGrid', 'ManagementGrid', 'ProtectionGrid', 'HistoryGrid', 'ResultGrid', 'DetailGrid', 'ActionsHistoryGrid')) {
         $g = $page.FindName($gridName)
         if ($g) { $g.Add_AutoGeneratingColumn({ param($sender, $e) $e.Column.Header = Get-WcString ('col.' + $e.PropertyName) }) }
     }
@@ -496,7 +638,9 @@ function Initialize-WcUi {
         CurrentPage  = $null
         SuppressSettingEvents = $false
         AutoDiagnostic = $AutoDiagnostic
+        Catalog      = $null
     }
+    $script:Ui.Catalog = Import-WcActionCatalog -Path $script:Ui.CatalogPath
     Set-WcLogSink -Sink $script:Ui.LogQueue
 
     $window = Import-WcXaml -Path (Join-Path $script:Ui.UiRoot 'MainWindow.xaml')
