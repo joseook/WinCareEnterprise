@@ -1,0 +1,5 @@
+dist/
+TestResults/
+validation-results/
+tools/
+*.log
