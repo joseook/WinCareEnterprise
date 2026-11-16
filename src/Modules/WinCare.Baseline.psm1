@@ -205,7 +205,9 @@ function Invoke-WcDesktopPowerShell {
     $text = (@($out | ForEach-Object { [string]$_ }) -join "`n").Trim()
     if ($code -ne 0) { throw ('Windows PowerShell 5.1 bridge failed ({0}): {1}' -f $code, $text) }
     if (-not $text) { return @() }
-    return @(ConvertFrom-Json -InputObject $text)
+    # The pipeline unrolls the array (ConvertFrom-Json on 5.1 returns it as one object).
+    $parsed = ConvertFrom-Json -InputObject $text
+    return @($parsed | ForEach-Object { $_ })
 }
 
 function Get-WcComputerRestorePointRaw {
