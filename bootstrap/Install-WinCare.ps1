@@ -113,8 +113,15 @@ function Get-WcbDefaultCacheRoot {
 }
 
 function Get-WcbSha256 {
+    <# Retries: antivirus often holds freshly extracted files for a moment. #>
     param([string] $Path)
-    return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToUpperInvariant()
+    for ($i = 1; $i -le 10; $i++) {
+        try { return (Get-FileHash -LiteralPath $Path -Algorithm SHA256 -ErrorAction Stop).Hash.ToUpperInvariant() }
+        catch {
+            if ($i -eq 10 -or -not (Test-Path -LiteralPath $Path)) { throw }
+            Start-Sleep -Milliseconds (300 * $i)
+        }
+    }
 }
 
 function Test-WcbRelativePath {
