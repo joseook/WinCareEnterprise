@@ -323,6 +323,20 @@ function Register-WcActionHandler {
 
 function Get-WcActionHandlerNames { return @($script:WcState.Handlers.Keys) }
 
+function Initialize-WcActionHandlers {
+    <#
+        Calls every exported Register-Wc*Handler function. Feature modules must NOT
+        register at import time: when imported through WinCare.psd1 (NestedModules)
+        Core's functions are not yet visible to sibling modules. Idempotent.
+    #>
+    [CmdletBinding()]
+    param()
+    foreach ($c in @(Get-Command -Name 'Register-Wc*Handler' -CommandType Function -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne 'Register-WcActionHandler' })) {
+        try { & $c } catch { Write-WcLog -Level Error -Category 'Handlers' -Message ("{0} failed: {1}" -f $c.Name, $_.Exception.Message) | Out-Null }
+    }
+    return @($script:WcState.Handlers.Keys)
+}
+
 function Clear-WcActionHandlers { $script:WcState.Handlers = @{} }
 
 function Test-WcActionDefinition {
@@ -452,6 +466,7 @@ function New-WcPlan {
         [Parameter(Mandatory = $true)][object] $OperationProfile,
         [Parameter(Mandatory = $true)][hashtable] $Context
     )
+    Initialize-WcActionHandlers | Out-Null
     $index = @{}
     foreach ($a in $Catalog) { $index[$a.Id] = $a }
     $items = @()
@@ -622,7 +637,7 @@ Export-ModuleMember -Function @(
     'Initialize-WcLog', 'Set-WcLogSink', 'Get-WcLogPath', 'Write-WcLog', 'Read-WcLog',
     'Get-WcSupportedLanguages', 'Import-WcLocalization', 'Get-WcString', 'Get-WcLocalizedValue',
     'Get-WcDefaultSettings', 'Test-WcSettings', 'Read-WcSettings', 'Save-WcSettings',
-    'Get-WcProfile', 'Register-WcActionHandler', 'Get-WcActionHandlerNames', 'Clear-WcActionHandlers',
+    'Get-WcProfile', 'Register-WcActionHandler', 'Get-WcActionHandlerNames', 'Initialize-WcActionHandlers', 'Clear-WcActionHandlers',
     'Test-WcActionDefinition', 'Import-WcActionCatalog', 'New-WcActionResult', 'New-WcContext', 'Test-WcActionAllowed',
     'New-WcPlan', 'Invoke-WcPlan', 'Add-WcHistory', 'Read-WcHistory', 'Test-WcPathWithin', 'Test-WcDriveLetter'
 )

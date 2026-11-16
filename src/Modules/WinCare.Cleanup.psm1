@@ -261,12 +261,18 @@ function Invoke-WcOptimizeAction {
 
 # ------------------------------------------------------------- handlers --
 
-Register-WcActionHandler -Name 'Cleanup-UserTemp' -Preview { param($Context) Invoke-WcTempCleanup -Scope User } -Execute { param($Context) Invoke-WcTempCleanup -Scope User -Execute }
-Register-WcActionHandler -Name 'Cleanup-WindowsTemp' -Preview { param($Context) Invoke-WcTempCleanup -Scope Windows } -Execute { param($Context) Invoke-WcTempCleanup -Scope Windows -Execute }
-Register-WcActionHandler -Name 'Storage-OptimizeAnalyze' -Preview { param($Context) Invoke-WcOptimizeAction -Mode Analyze } -Execute { param($Context) Invoke-WcOptimizeAction -Mode Analyze -Execute }
-Register-WcActionHandler -Name 'Storage-OptimizeRetrim' -Preview { param($Context) Invoke-WcOptimizeAction -Mode ReTrim } -Execute { param($Context) Invoke-WcOptimizeAction -Mode ReTrim -Execute }
 
-Export-ModuleMember -Function @(
+function Register-WcCleanupHandler {
+    <# Called lazily by Core (Initialize-WcActionHandlers): Core is not visible while the manifest is still importing. #>
+    [CmdletBinding()]
+    param()
+    Register-WcActionHandler -Name 'Cleanup-UserTemp' -Preview { param($Context) Invoke-WcTempCleanup -Scope User } -Execute { param($Context) Invoke-WcTempCleanup -Scope User -Execute }
+    Register-WcActionHandler -Name 'Cleanup-WindowsTemp' -Preview { param($Context) Invoke-WcTempCleanup -Scope Windows } -Execute { param($Context) Invoke-WcTempCleanup -Scope Windows -Execute }
+    Register-WcActionHandler -Name 'Storage-OptimizeAnalyze' -Preview { param($Context) Invoke-WcOptimizeAction -Mode Analyze } -Execute { param($Context) Invoke-WcOptimizeAction -Mode Analyze -Execute }
+    Register-WcActionHandler -Name 'Storage-OptimizeRetrim' -Preview { param($Context) Invoke-WcOptimizeAction -Mode ReTrim } -Execute { param($Context) Invoke-WcOptimizeAction -Mode ReTrim -Execute }
+}
+
+Export-ModuleMember -Function @('Register-WcCleanupHandler', 
     'Test-WcTempRootSafe', 'Get-WcTempRoot', 'Get-WcTempFileEntry', 'ConvertTo-WcTempCandidate', 'Get-WcTempCleanupScan',
     'Test-WcSafeDeletePath', 'Remove-WcTempFile', 'Invoke-WcTempCleanup',
     'Get-WcOptimizeDriveLetter', 'Invoke-WcOptimizeVolume', 'Get-WcSystemVolumeMedia', 'Invoke-WcOptimizeAction'

@@ -8,7 +8,7 @@
 param([string] $OutputDirectory)
 $ErrorActionPreference = 'Stop'
 # $PSScriptRoot is empty inside param() defaults on Windows PowerShell 5.1 -File runs.
-$repo = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+$repo = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path))
 if (-not $OutputDirectory) { $OutputDirectory = Join-Path $repo 'TestResults\screenshots' }
 $src = Join-Path $repo 'src'
 Import-Module (Join-Path $src 'WinCare.psd1') -Force -DisableNameChecking

@@ -293,14 +293,20 @@ function Invoke-WcIntegrityAction {
 
 # -------------------------------------------------------------- handlers --
 
-Register-WcActionHandler -Name 'Integrity-SfcVerify' -Preview { param($Context) Invoke-WcIntegrityAction -Id 'integrity.sfc-verify' } -Execute { param($Context) Invoke-WcIntegrityAction -Id 'integrity.sfc-verify' -Execute }
-Register-WcActionHandler -Name 'Integrity-SfcScannow' -Preview { param($Context) Invoke-WcIntegrityAction -Id 'integrity.sfc-scannow' } -Execute { param($Context) Invoke-WcIntegrityAction -Id 'integrity.sfc-scannow' -Execute }
-Register-WcActionHandler -Name 'Integrity-DismCheckHealth' -Preview { param($Context) Invoke-WcIntegrityAction -Id 'integrity.dism-checkhealth' } -Execute { param($Context) Invoke-WcIntegrityAction -Id 'integrity.dism-checkhealth' -Execute }
-Register-WcActionHandler -Name 'Integrity-DismScanHealth' -Preview { param($Context) Invoke-WcIntegrityAction -Id 'integrity.dism-scanhealth' } -Execute { param($Context) Invoke-WcIntegrityAction -Id 'integrity.dism-scanhealth' -Execute }
-Register-WcActionHandler -Name 'Integrity-DismRestoreHealth' -Preview { param($Context) Invoke-WcIntegrityAction -Id 'integrity.dism-restorehealth' } -Execute { param($Context) Invoke-WcIntegrityAction -Id 'integrity.dism-restorehealth' -Execute }
-Register-WcActionHandler -Name 'Integrity-ChkdskScan' -Preview { param($Context) Invoke-WcIntegrityAction -Id 'integrity.chkdsk-scan' } -Execute { param($Context) Invoke-WcIntegrityAction -Id 'integrity.chkdsk-scan' -Execute }
 
-Export-ModuleMember -Function @(
+function Register-WcIntegrityHandler {
+    <# Called lazily by Core (Initialize-WcActionHandlers): Core is not visible while the manifest is still importing. #>
+    [CmdletBinding()]
+    param()
+    Register-WcActionHandler -Name 'Integrity-SfcVerify' -Preview { param($Context) Invoke-WcIntegrityAction -Id 'integrity.sfc-verify' } -Execute { param($Context) Invoke-WcIntegrityAction -Id 'integrity.sfc-verify' -Execute }
+    Register-WcActionHandler -Name 'Integrity-SfcScannow' -Preview { param($Context) Invoke-WcIntegrityAction -Id 'integrity.sfc-scannow' } -Execute { param($Context) Invoke-WcIntegrityAction -Id 'integrity.sfc-scannow' -Execute }
+    Register-WcActionHandler -Name 'Integrity-DismCheckHealth' -Preview { param($Context) Invoke-WcIntegrityAction -Id 'integrity.dism-checkhealth' } -Execute { param($Context) Invoke-WcIntegrityAction -Id 'integrity.dism-checkhealth' -Execute }
+    Register-WcActionHandler -Name 'Integrity-DismScanHealth' -Preview { param($Context) Invoke-WcIntegrityAction -Id 'integrity.dism-scanhealth' } -Execute { param($Context) Invoke-WcIntegrityAction -Id 'integrity.dism-scanhealth' -Execute }
+    Register-WcActionHandler -Name 'Integrity-DismRestoreHealth' -Preview { param($Context) Invoke-WcIntegrityAction -Id 'integrity.dism-restorehealth' } -Execute { param($Context) Invoke-WcIntegrityAction -Id 'integrity.dism-restorehealth' -Execute }
+    Register-WcActionHandler -Name 'Integrity-ChkdskScan' -Preview { param($Context) Invoke-WcIntegrityAction -Id 'integrity.chkdsk-scan' } -Execute { param($Context) Invoke-WcIntegrityAction -Id 'integrity.chkdsk-scan' -Execute }
+}
+
+Export-ModuleMember -Function @('Register-WcIntegrityHandler', 
     'Get-WcNativeToolPath', 'Get-WcIntegrityCommand', 'Get-WcOutputEncoding', 'New-WcOutputState', 'Select-WcOutputLine',
     'Add-WcOutputBytes', 'Add-WcOutputText', 'Invoke-WcNativeCommand', 'ConvertTo-WcIntegrityResult', 'Invoke-WcIntegrityAction'
 )

@@ -197,7 +197,7 @@ Describe 'F3 catalog and localization' {
         $script:En = Read-WcJsonFile -Path (Join-Path $script:SrcRoot 'Localization/en-US.d/f3-maintenance.json')
     }
     It 'loads with the main catalog and every F3 action has a registered handler' {
-        $names = Get-WcActionHandlerNames
+        $names = Initialize-WcActionHandlers
         foreach ($a in $script:Frag.actions) {
             @($script:Catalog | Where-Object { $_.Id -eq $a.Id }).Count | Should -Be 1
             $names | Should -Contain $a.Handler

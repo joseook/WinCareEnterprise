@@ -181,4 +181,22 @@ Describe 'Module manifest' {
         Import-Module (Join-Path $script:SrcRoot 'WinCare.psd1') -Force -DisableNameChecking
         foreach ($f in 'Invoke-WcDiagnostic', 'Export-WcReport', 'New-WcPlan', 'Get-WcVolumeInfo') { Get-Command $f -ErrorAction Stop | Should -Not -BeNullOrEmpty }
     }
+    It 'imports in a clean session and every catalog action has a handler' {
+        # Regression: nested modules cannot call Core during manifest import (found on real Windows CI).
+        $ps = [System.Management.Automation.PowerShell]::Create([System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault())
+        try {
+            [void]$ps.AddScript({
+                    param($src)
+                    $ErrorActionPreference = 'Stop'
+                    Import-Module (Join-Path $src 'WinCare.psd1') -DisableNameChecking
+                    $cat = Import-WcActionCatalog -Path (Join-Path $src 'Core/actions.json')
+                    $plan = New-WcPlan -Catalog $cat -ActionId @($cat | ForEach-Object { $_.Id }) -OperationProfile (Get-WcProfile 'Avancado') -Context (New-WcContext -IsAdmin $true -Build 26100)
+                    @($plan.Items | Where-Object { @($_.Reasons) -contains 'policy.no-handler' } | ForEach-Object { $_.ActionId })
+                }).AddArgument($script:SrcRoot)
+            $missing = @($ps.Invoke())
+            @($ps.Streams.Error).Count | Should -Be 0 -Because (($ps.Streams.Error | ForEach-Object { $_.ToString() }) -join '; ')
+            $missing.Count | Should -Be 0 -Because ($missing -join ', ')
+        }
+        finally { $ps.Dispose() }
+    }
 }
