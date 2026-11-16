@@ -15,7 +15,7 @@ irm https://wincare.joseok.cloud/run | iex
 Ou o comando **verificado**, com o hash do `install.ps1` fixado aqui no README (canal independente do site):
 
 ```powershell
-{{ONELINER}}
+$f="$env:TEMP\wincare-install.ps1"; iwr https://wincare.joseok.cloud/install.ps1 -UseBasicParsing -OutFile $f; if ((Get-FileHash $f -Algorithm SHA256).Hash -eq 'EB71A4DD71F0E80DE7D2574806FA06982119AD1988342A266D744D52917AE841') { powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File $f } else { Write-Error 'install.ps1 nao confere - nada foi executado' }
 ```
 
 Os dois só executam o `install.ps1` da versão se o SHA-256 conferir. Ele baixa o pacote do GitHub Releases e verifica a assinatura RSA do manifesto (chave fixada), o hash do zip e o de cada arquivo antes de abrir. Como administrador, a cópia verificada fica em `Program Files\WinCare`. Na interface, **Executar como administrador** reabre pelo mesmo caminho verificado.
