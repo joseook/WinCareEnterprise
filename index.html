@@ -1,48 +1,295 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
-<title>WinCare Enterprise</title>
-<style>
-:root{--bg:#0f1115;--card:#171a21;--text:#e6e9ef;--muted:#a3acbb;--accent:#2f6fdb;--border:#2c3342}
-@media (prefers-color-scheme: light){:root{--bg:#f4f6f9;--card:#fff;--text:#1b1f24;--muted:#57606a;--accent:#1f5fc7;--border:#d0d7e0}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 "Segoe UI",system-ui,sans-serif}
-main{max-width:860px;margin:0 auto;padding:48px 16px}h1{font-size:30px;margin:0 0 4px}p{color:var(--muted)}
-.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin:20px 0}
-pre{white-space:pre-wrap;word-break:break-all;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;font:13px/1.5 Consolas,monospace;color:var(--text);margin:0}
-button{background:var(--accent);color:#fff;border:0;border-radius:6px;padding:9px 16px;font:inherit;cursor:pointer;margin-top:12px}
-button:focus-visible{outline:2px solid var(--text);outline-offset:2px}
-ol{padding-left:20px}code{font-family:Consolas,monospace}a{color:var(--accent)}
-</style>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>WinCare Enterprise — diagnóstico e manutenção do Windows</title>
+<meta name="description" content="Ferramenta open source de diagnóstico, manutenção e otimização do Windows 10 e 11 para técnicos e empresas. Um comando, pacote assinado e verificado, nada muda sem a sua confirmação.">
+<meta name="theme-color" content="#0F1115">
+<meta property="og:title" content="WinCare Enterprise">
+<meta property="og:description" content="Diagnóstico e manutenção do Windows, sem atalhos que contornem a segurança. Open source (MIT).">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://wincare.joseok.cloud/">
+<link rel="stylesheet" href="styles.css?v=0.3.0">
+<link rel="icon" href="assets/icon.svg?v=0.3.0" type="image/svg+xml">
+<script src="app.js?v=0.3.0" defer></script>
 </head>
-<body><main>
-<h1>WinCare Enterprise</h1>
-<p>Diagnóstico e manutenção do Windows para técnicos. Versão 0.3.0. Open source (MIT).</p>
-<div class="card">
-<strong>Rápido: abra o PowerShell (como administrador, para aplicar otimizações) e cole</strong>
-<pre id="cmd-short">irm https://wincare.joseok.cloud/run | iex</pre>
-<button type="button" class="copy" data-target="cmd-short">Copiar comando</button>
-<p>O <a href="https://wincare.joseok.cloud/run.ps1">script <code>run</code></a> é curto, legível e não executa nada além do <code>install.ps1</code> desta versão, conferido pelo SHA-256 <code>CA1E97CF85331B6CC5158FF38379C31F609C7DB2F53D005E47D0A89C1B074F33</code>.</p>
-</div>
-<div class="card">
-<strong>Verificado: o hash fica do seu lado (auditoria, usuário sem privilégio)</strong>
-<pre id="cmd">$f=&quot;$env:TEMP\wincare-install.ps1&quot;; iwr https://wincare.joseok.cloud/install.ps1 -UseBasicParsing -OutFile $f; if ((Get-FileHash $f -Algorithm SHA256).Hash -eq &#39;CA1E97CF85331B6CC5158FF38379C31F609C7DB2F53D005E47D0A89C1B074F33&#39;) { powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File $f } else { Write-Error &#39;install.ps1 nao confere - nada foi executado&#39; }</pre>
-<button type="button" class="copy" data-target="cmd">Copiar comando</button>
-</div>
-<div class="card">
-<strong>O que acontece</strong>
-<ol>
-<li>O <code>install.ps1</code> só roda se o SHA-256 bater. Ele baixa o pacote do GitHub Releases e confere a assinatura RSA do manifesto (chave fixada), o hash do zip e o de cada arquivo.</li>
-<li>Como administrador, a cópia verificada fica em <code>Arquivos de Programas\WinCare</code> (só administradores gravam); sem privilégio, em <code>%LOCALAPPDATA%</code>. Na interface, “Executar como administrador” reabre pelo mesmo caminho verificado.</li>
-<li>Abrir o WinCare não altera nada. Cada ação mostra a prévia e pede confirmação.</li>
-</ol>
-<p>Usa <code>-ExecutionPolicy RemoteSigned</code> só no processo, sem <code>Bypass</code>: políticas de grupo, AppLocker e WDAC continuam valendo. Em máquinas corporativas com <code>AllSigned</code> ou AppLocker, veja o <a href="https://github.com/joseook/WinCareEnterprise/blob/main/docs/CORPORATIVO.md">guia corporativo</a>.</p>
-<p>Código e comandos no <a href="https://github.com/joseook/WinCareEnterprise#readme">GitHub</a>. SHA-256 do pacote 0.3.0: <code>00E51A7B64FA6B3B838F31142EB0E3ED441F87B2C1ADDE4F98EC877BBACED50A</code>.</p>
-</div>
+<body>
+<a class="skip" href="#instalar">Pular para o comando</a>
+
+<header class="top">
+  <div class="wrap top__in">
+    <a class="brand" href="#" aria-label="WinCare Enterprise, início">
+      <img src="assets/icon.svg?v=0.3.0" width="28" height="28" alt="">
+      <span>WinCare <em>Enterprise</em></span>
+    </a>
+    <nav class="top__nav" aria-label="Seções">
+      <a href="#recursos">Recursos</a>
+      <a href="#seguranca">Segurança</a>
+      <a href="#empresas">Empresas</a>
+      <a href="#docs">Documentação</a>
+      <a class="top__gh" href="https://github.com/joseook/WinCareEnterprise" rel="noopener">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- HERO: the command first (Mobbin refs: Giga install pill, Hermes Agent tabbed install box). -->
+  <section class="hero" id="instalar">
+    <div class="wrap hero__in">
+      <p class="eyebrow reveal">Open source · MIT · Windows 10 e 11 · v0.3.0</p>
+      <h1 class="reveal">Diagnóstico e manutenção do Windows, <span class="accent">sem atalhos perigosos.</span></h1>
+      <p class="lead reveal">Descubra o que está deixando o computador lento, aplique manutenção com prévia e confirmação, e acompanhe tudo num log de auditoria. Abrir o WinCare não altera nada.</p>
+
+      <div class="install reveal" data-tabs>
+        <div class="install__tabs" role="tablist" aria-label="Forma de instalação">
+          <button role="tab" id="tab-fast" aria-controls="pane-fast" aria-selected="true">Rápido</button>
+          <button role="tab" id="tab-verified" aria-controls="pane-verified" aria-selected="false" tabindex="-1">Verificado</button>
+        </div>
+        <div class="install__pane" role="tabpanel" id="pane-fast" aria-labelledby="tab-fast">
+          <div class="cmd">
+            <span class="cmd__prompt" aria-hidden="true">PS&gt;</span>
+            <code id="cmd-fast">irm https://wincare.joseok.cloud/run | iex</code>
+            <button class="copy" data-copy="cmd-fast" aria-label="Copiar comando rápido">Copiar</button>
+          </div>
+          <p class="install__hint">Abra o <strong>PowerShell</strong> (como administrador para aplicar otimizações), cole e pressione Enter.</p>
+        </div>
+        <div class="install__pane" role="tabpanel" id="pane-verified" aria-labelledby="tab-verified" hidden>
+          <div class="cmd cmd--long">
+            <span class="cmd__prompt" aria-hidden="true">PS&gt;</span>
+            <code id="cmd-verified">$f=&quot;$env:TEMP\wincare-install.ps1&quot;; iwr https://wincare.joseok.cloud/install.ps1 -UseBasicParsing -OutFile $f; if ((Get-FileHash $f -Algorithm SHA256).Hash -eq &#39;CA1E97CF85331B6CC5158FF38379C31F609C7DB2F53D005E47D0A89C1B074F33&#39;) { powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File $f } else { Write-Error &#39;install.ps1 nao confere - nada foi executado&#39; }</code>
+            <button class="copy" data-copy="cmd-verified" aria-label="Copiar comando verificado">Copiar</button>
+          </div>
+          <p class="install__hint">O hash do <code>install.ps1</code> fica fixado no próprio comando. Indicado para auditoria e ambientes corporativos.</p>
+        </div>
+      </div>
+
+      <ul class="meta reveal">
+        <li>PowerShell 5.1 ou 7</li>
+        <li>Sem instalador e sem <code>Bypass</code></li>
+        <li>Pacote assinado e verificado</li>
+      </ul>
+    </div>
+    <figure class="shot shot--hero reveal">
+      <img src="assets/overview.webp?v=0.3.0" width="1028" height="749" alt="Tela Visão geral do WinCare: Windows, CPU, memória, disco, tempo ligado e gerenciamento corporativo" fetchpriority="high">
+    </figure>
+  </section>
+
+  <section class="steps wrap" aria-labelledby="steps-title">
+    <h2 id="steps-title" class="sr">Como funciona</h2>
+    <ol class="steps__list">
+      <li class="reveal"><span class="steps__n">1</span><h3>Cole o comando</h3><p>O <code>install.ps1</code> da versão é baixado e só roda se o SHA-256 conferir.</p></li>
+      <li class="reveal"><span class="steps__n">2</span><h3>O pacote é verificado</h3><p>Assinatura RSA do manifesto, hash do zip e de cada arquivo. Qualquer diferença: nada é executado.</p></li>
+      <li class="reveal"><span class="steps__n">3</span><h3>Diagnóstico, depois ação</h3><p>A interface abre em modo leitura. Cada ação mostra a prévia e pede confirmação.</p></li>
+    </ol>
+  </section>
+
+  <section class="features wrap" id="recursos" aria-labelledby="feat-title">
+    <header class="section-head reveal">
+      <p class="eyebrow">Recursos</p>
+      <h2 id="feat-title">Tudo que um técnico confere, num lugar só</h2>
+      <p class="muted">Dezesseis páginas, em português e inglês, tema escuro e claro.</p>
+    </header>
+    <div class="grid">
+      <article class="card reveal"><h3>Diagnóstico</h3><p>Edição e build do Windows, CPU, memória, discos HDD/SSD, tempo ligado, reinício pendente e sinais de gerenciamento, com alertas de limite documentado.</p></article>
+      <article class="card reveal"><h3>Processos e memória</h3><p>Quem está consumindo RAM, suspeita de vazamento, programas em segundo plano sem assinatura e CPU agora. Encerra um processo com proteção a sistema e segurança.</p></article>
+      <article class="card reveal"><h3>Saúde do sistema</h3><p>Telas azuis, desligamentos inesperados, erros de disco e hardware, drivers com problema, desgaste do SSD, bateria e tarefas de inicialização de terceiros.</p></article>
+      <article class="card reveal"><h3>Otimização</h3><p>Limpeza de temporários com prévia do espaço, ReTrim em SSD, comparação antes/depois e ponto de restauração quando a Proteção do Sistema está ligada.</p></article>
+      <article class="card reveal"><h3>Integridade do Windows</h3><p>SFC, DISM e CHKDSK oficiais, com a saída interpretada e registrada. Os reparos ficam bloqueados em máquina gerenciada.</p></article>
+      <article class="card reveal"><h3>Aplicativos e reparos</h3><p>Programas instalados, desinstaladores quebrados, atualizações via winget (só as que você escolher) e redefinição de apps da Store.</p></article>
+      <article class="card reveal"><h3>Rede</h3><p>Adaptadores, testes de gateway, DNS e internet, proxy e VPN. Limpa o cache DNS, renova IP e redefine o Winsock com confirmação.</p></article>
+      <article class="card reveal"><h3>Microsoft Office</h3><p>Versão, canal, suplementos e o tempo de abertura do Word em modo normal e seguro, para achar o que deixa o Word lento.</p></article>
+    </div>
+  </section>
+
+  <section class="gallery wrap" aria-labelledby="gal-title">
+    <header class="section-head reveal">
+      <p class="eyebrow">Capturas reais</p>
+      <h2 id="gal-title">Renderizadas no Windows pelo CI a cada versão</h2>
+    </header>
+    <div class="gallery__grid">
+      <figure class="shot reveal"><img src="assets/processes.webp?v=0.3.0" width="1028" height="749" loading="lazy" decoding="async" alt="Página Processos e memória com visão geral da memória e maiores consumidores"><figcaption>Processos e memória</figcaption></figure>
+      <figure class="shot reveal"><img src="assets/health.webp?v=0.3.0" width="1028" height="749" loading="lazy" decoding="async" alt="Página Saúde do sistema com eventos críticos, falhas de aplicativos e drivers"><figcaption>Saúde do sistema</figcaption></figure>
+      <figure class="shot reveal"><img src="assets/network.webp?v=0.3.0" width="1028" height="749" loading="lazy" decoding="async" alt="Página Rede com adaptadores e testes de conectividade"><figcaption>Rede</figcaption></figure>
+      <figure class="shot reveal"><img src="assets/apps-light.webp?v=0.3.0" width="1028" height="749" loading="lazy" decoding="async" alt="Página Aplicativos e reparos no tema claro com a lista de programas instalados"><figcaption>Aplicativos e reparos (tema claro)</figcaption></figure>
+    </div>
+  </section>
+
+  <section class="band" id="seguranca" aria-labelledby="sec-title">
+    <div class="wrap band__in">
+      <header class="section-head reveal">
+        <p class="eyebrow">Segurança</p>
+        <h2 id="sec-title">Feito para rodar como administrador em parque corporativo</h2>
+      </header>
+      <ul class="checks">
+        <li class="reveal"><strong>Nunca desativa proteções.</strong> Nenhum perfil mexe em Defender, Firewall, BitLocker, Windows Update, GPO, MDM, EDR, VPN ou autenticação — o catálogo rejeita ações que tentem.</li>
+        <li class="reveal"><strong>Política de execução respeitada.</strong> Usa <code>RemoteSigned</code> só no processo; GPO, AppLocker e WDAC continuam valendo. Sem <code>Bypass</code>.</li>
+        <li class="reveal"><strong>Release assinado.</strong> Manifesto com RSA-3072 e chave pública fixada no <code>install.ps1</code>; hash de cada arquivo; nenhum arquivo extra aceito.</li>
+        <li class="reveal"><strong>Prévia, confirmação e auditoria.</strong> Cada ação mostra o que faria, pede confirmação individual e fica no log JSONL local.</li>
+        <li class="reveal"><strong>Elevação segura.</strong> Como administrador, a cópia verificada fica em <code>Program Files</code>; o processo elevado nunca executa arquivo gravável pelo usuário.</li>
+        <li class="reveal"><strong>Sem telemetria.</strong> Diagnóstico e relatórios ficam no computador. Nada é enviado.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="corp wrap" id="empresas" aria-labelledby="corp-title">
+    <header class="section-head reveal">
+      <p class="eyebrow">Empresas</p>
+      <h2 id="corp-title">Funciona com as regras da sua TI</h2>
+    </header>
+    <div class="grid grid--3">
+      <article class="card reveal"><h3>Perfil Corporativo</h3><p>Só ações de baixo risco e bloqueio de tudo que conflita com políticas gerenciadas, mesmo sem detectar o gerenciamento.</p></article>
+      <article class="card reveal"><h3>AllSigned e AppLocker</h3><p>A TI verifica o release e reassina com o certificado da própria organização. O WinCare detecta e explica o bloqueio em vez de contornar.</p></article>
+      <article class="card reveal"><h3>Proxy, offline e Intune</h3><p>Proxy com autenticação Windows, instalação a partir de mídia e distribuição da pasta assinada por Intune, ConfigMgr ou GPO.</p></article>
+    </div>
+    <p class="more reveal"><a href="https://github.com/joseook/WinCareEnterprise/blob/main/docs/CORPORATIVO.md" rel="noopener">Guia corporativo completo →</a></p>
+  </section>
+
+  <!-- DOCS: sticky table of contents + content (Mobbin refs: Base44 code blocks, Snowflake doc sections). -->
+  <section class="docs wrap" id="docs" aria-labelledby="docs-title">
+    <header class="section-head reveal">
+      <p class="eyebrow">Documentação</p>
+      <h2 id="docs-title">Guia rápido de uso</h2>
+    </header>
+    <div class="docs__layout">
+      <nav class="toc" aria-label="Sumário da documentação">
+        <a href="#d-requisitos">Requisitos</a>
+        <a href="#d-instalar">Instalar e abrir</a>
+        <a href="#d-admin">Como administrador</a>
+        <a href="#d-perfis">Perfis de operação</a>
+        <a href="#d-atualizar">Atualizar</a>
+        <a href="#d-offline">Sem internet</a>
+        <a href="#d-dados">Dados e remoção</a>
+        <a href="#d-problemas">Solução de problemas</a>
+        <a href="#d-integridade">Integridade</a>
+        <a href="#d-faq">Perguntas frequentes</a>
+      </nav>
+      <div class="doc">
+        <h3 id="d-requisitos">Requisitos</h3>
+        <ul>
+          <li>Windows 10 ou 11 (Pro, Enterprise, IoT Enterprise, LTSC).</li>
+          <li>Windows PowerShell 5.1 (já vem no Windows). Se o PowerShell 7 estiver instalado em <code>Program Files</code>, ele é usado automaticamente.</li>
+          <li>Internet para baixar o release (ou o modo sem internet).</li>
+        </ul>
+
+        <h3 id="d-instalar">Instalar e abrir</h3>
+        <p>Não há instalação: o comando baixa a versão, verifica e abre a interface. Rodar de novo reabre a cópia já verificada.</p>
+        <div class="code"><button class="copy" data-copy="d1" aria-label="Copiar">Copiar</button><pre><code id="d1">irm https://wincare.joseok.cloud/run | iex</code></pre></div>
+        <p>Para forçar um host específico, baixe o <code>install.ps1</code> e use o parâmetro:</p>
+        <div class="code"><button class="copy" data-copy="d2" aria-label="Copiar">Copiar</button><pre><code id="d2">.\install.ps1 -PowerShellHost WindowsPowerShell   # ou PowerShell7</code></pre></div>
+
+        <h3 id="d-admin">Como administrador</h3>
+        <p>Limpeza da pasta do Windows, SFC, DISM, ReTrim e reparos de rede exigem administrador. Abra o PowerShell com “Executar como administrador” e use o mesmo comando, ou clique em <strong>Executar como administrador</strong> dentro do WinCare (pede o UAC e reabre pela cópia verificada).</p>
+
+        <h3 id="d-perfis">Perfis de operação</h3>
+        <div class="table">
+          <table>
+            <thead><tr><th>Perfil</th><th>O que permite</th></tr></thead>
+            <tbody>
+              <tr><td>Diagnóstico <span class="tag">padrão</span></td><td>Somente leitura. Nenhuma alteração.</td></tr>
+              <tr><td>Conservador</td><td>Manutenção de baixo risco, com confirmação por ação.</td></tr>
+              <tr><td>Corporativo</td><td>Baixo risco e bloqueio de ações sensíveis a políticas gerenciadas.</td></tr>
+              <tr><td>Avançado</td><td>Ações de risco médio e alto para técnicos (ex.: encerrar processo, redefinir Winsock), sempre com confirmação individual.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Troque em <strong>Configurações</strong>. Ações fora do perfil aparecem desabilitadas, com o motivo.</p>
+
+        <h3 id="d-atualizar">Atualizar</h3>
+        <p>Rode o mesmo comando. Ele sempre aponta para a versão publicada mais recente; a anterior fica no cache e deixa de ser usada. Novidades em <a href="https://github.com/joseook/WinCareEnterprise/releases" rel="noopener">Releases</a>.</p>
+
+        <h3 id="d-offline">Sem internet</h3>
+        <p>Baixe do release o zip, o manifesto, o <code>.sig</code> e o <code>install.ps1</code>, leve numa mídia e rode:</p>
+        <div class="code"><button class="copy" data-copy="d3" aria-label="Copiar">Copiar</button><pre><code id="d3">powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File E:\install.ps1 `
+  -PackagePath E:\WinCare-0.3.0.zip -ManifestPath E:\WinCare-0.3.0.manifest.json</code></pre></div>
+
+        <h3 id="d-dados">Dados e remoção</h3>
+        <ul>
+          <li>Logs, relatórios, histórico e configurações: <code>%LOCALAPPDATA%\WinCare</code>.</li>
+          <li>Cópia verificada do app: <code>%LOCALAPPDATA%\WinCare\app</code> (usuário) ou <code>%ProgramFiles%\WinCare</code> (administrador).</li>
+        </ul>
+        <p>Para remover tudo, feche o WinCare e apague as pastas:</p>
+        <div class="code"><button class="copy" data-copy="d4" aria-label="Copiar">Copiar</button><pre><code id="d4">Remove-Item "$env:LOCALAPPDATA\WinCare" -Recurse -Force
+Remove-Item "$env:ProgramFiles\WinCare" -Recurse -Force   # só se rodou como administrador</code></pre></div>
+
+        <h3 id="d-problemas">Solução de problemas</h3>
+        <dl class="faq">
+          <dt>“A execução de scripts foi desabilitada” / Restricted por GPO</dt>
+          <dd>A política da organização impede qualquer script. O WinCare não contorna: peça uma exceção à TI.</dd>
+          <dt>“AllSigned” ou PowerShell em ConstrainedLanguage</dt>
+          <dd>A máquina exige scripts assinados ou usa AppLocker/WDAC. A TI pode reassinar o release com o certificado da empresa — veja o <a href="https://github.com/joseook/WinCareEnterprise/blob/main/docs/CORPORATIVO.md" rel="noopener">guia corporativo</a>.</dd>
+          <dt>O antivírus alertou sobre <code>irm | iex</code></dt>
+          <dd>Alguns EDRs alertam esse padrão por ser comum em malware. Use o comando <strong>Verificado</strong>, que roda o instalador como arquivo com o hash conferido.</dd>
+          <dt>Erro de download atrás de proxy</dt>
+          <dd>O download usa o proxy do sistema com as credenciais do Windows. Se o proxy exigir outra autenticação, use o modo sem internet.</dd>
+          <dt>Onde vejo o que aconteceu?</dt>
+          <dd>No console da interface, em Histórico e relatórios, e nos arquivos <code>%LOCALAPPDATA%\WinCare\logs\*.jsonl</code>.</dd>
+        </dl>
+
+        <h3 id="d-integridade">Integridade da versão 0.3.0</h3>
+        <div class="table">
+          <table>
+            <tbody>
+              <tr><th scope="row"><code>install.ps1</code> SHA-256</th><td><code class="hash">CA1E97CF85331B6CC5158FF38379C31F609C7DB2F53D005E47D0A89C1B074F33</code></td></tr>
+              <tr><th scope="row"><code>WinCare-0.3.0.zip</code> SHA-256</th><td><code class="hash">00E51A7B64FA6B3B838F31142EB0E3ED441F87B2C1ADDE4F98EC877BBACED50A</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Os mesmos valores estão no <a href="https://github.com/joseook/WinCareEnterprise#readme" rel="noopener">README</a> e na página do release — canais independentes deste site.</p>
+
+        <h3 id="d-faq">Perguntas frequentes</h3>
+        <dl class="faq">
+          <dt>É gratuito?</dt>
+          <dd>Sim. Código aberto sob licença MIT.</dd>
+          <dt>Tem “limpador de RAM” ou “turbo”?</dt>
+          <dd>Não. Esvaziar a memória à força não deixa o Windows mais rápido — só obriga a ler tudo de novo do disco. O WinCare mostra quem está usando a memória para você decidir.</dd>
+          <dt>Altera o registro ou serviços do Windows?</dt>
+          <dd>Só as ações do catálogo, cada uma com prévia e confirmação. Nada de “tweaks” ocultos.</dd>
+          <dt>Em quais Windows foi testado?</dt>
+          <dd>A cada versão, o CI roda os testes e a interface no Windows real com PowerShell 5.1 e 7. Também foi homologado manualmente num Windows 11 corporativo. Windows 10, IoT e LTSC ainda não tiveram validação manual.</dd>
+          <dt>Encontrei um problema</dt>
+          <dd>Abra uma <a href="https://github.com/joseook/WinCareEnterprise/issues" rel="noopener">issue no GitHub</a> com o log da pasta <code>logs</code>.</dd>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta wrap reveal" aria-labelledby="cta-title">
+    <h2 id="cta-title">Pronto para testar?</h2>
+    <div class="cmd">
+      <span class="cmd__prompt" aria-hidden="true">PS&gt;</span>
+      <code id="cmd-cta">irm https://wincare.joseok.cloud/run | iex</code>
+      <button class="copy" data-copy="cmd-cta" aria-label="Copiar comando">Copiar</button>
+    </div>
+  </section>
 </main>
-<script>
-document.querySelectorAll('button.copy').forEach(function(b){b.addEventListener('click',function(){navigator.clipboard.writeText(document.getElementById(b.dataset.target).textContent).then(function(){b.textContent='Copiado';setTimeout(function(){b.textContent='Copiar comando'},1500)})})});
-</script>
-</body></html>
+
+<footer class="foot">
+  <div class="wrap foot__in">
+    <div class="dev">
+      <span class="dev__avatar" aria-hidden="true">JP</span>
+      <div>
+        <p class="dev__name">José Paulo Neto Filho <span class="muted">@joseook</span></p>
+        <p class="muted">Criador e mantenedor do WinCare Enterprise</p>
+        <ul class="social">
+          <li><a href="https://github.com/joseook" rel="noopener me">GitHub</a></li>
+          <li><a href="https://www.linkedin.com/in/joseok/" rel="noopener me">LinkedIn</a></li>
+          <li><a href="https://x.com/joseokdev" rel="noopener me">X</a></li>
+          <li><a href="https://joseok.cloud" rel="noopener me">joseok.cloud</a></li>
+          <li><a href="mailto:hello@joseok.cloud">hello@joseok.cloud</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot__links">
+      <a href="https://github.com/joseook/WinCareEnterprise" rel="noopener">Código-fonte</a>
+      <a href="https://github.com/joseook/WinCareEnterprise/releases" rel="noopener">Releases</a>
+      <a href="https://github.com/joseook/WinCareEnterprise/blob/main/SECURITY.md" rel="noopener">Segurança</a>
+      <a href="https://github.com/joseook/WinCareEnterprise/blob/main/LICENSE" rel="noopener">Licença MIT</a>
+    </div>
+  </div>
+</footer>
+<div class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
