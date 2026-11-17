@@ -1,0 +1,76 @@
+<ScrollViewer xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" VerticalScrollBarVisibility="Auto" Focusable="False">
+    <!-- "About the system": product, this environment, developer. Links open fixed URLs from an allowlist in WinCare.UI.psm1. -->
+    <StackPanel Margin="24,20,24,24" MaxWidth="980" HorizontalAlignment="Left">
+        <Border Style="{DynamicResource Card}" Padding="24,22" Margin="0,0,0,14">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Border Width="52" Height="52" CornerRadius="12" Background="{DynamicResource Brush.Accent}" VerticalAlignment="Center">
+                        <TextBlock Text="&#xE90F;" FontFamily="{DynamicResource Font.Icons}" FontSize="24" Foreground="{DynamicResource Brush.OnAccent}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <StackPanel Margin="16,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="WinCare Enterprise" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource Brush.Text}"/>
+                        <TextBlock x:Name="AboutTagline" Style="{DynamicResource Text.Muted}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </StackPanel>
+                <WrapPanel Margin="-4,14,0,0">
+                    <Border Style="{DynamicResource Badge}"><TextBlock x:Name="AboutVersion" Style="{DynamicResource Text.Muted}"/></Border>
+                    <Border Style="{DynamicResource Badge}"><TextBlock Text="{DynamicResource str.about.license}" Style="{DynamicResource Text.Muted}"/></Border>
+                    <Border Style="{DynamicResource Badge}"><TextBlock Text="{DynamicResource str.about.opensource}" Style="{DynamicResource Text.Muted}"/></Border>
+                </WrapPanel>
+                <WrapPanel Margin="0,16,0,0">
+                    <Button x:Name="LinkRepo" Tag="repo" Style="{DynamicResource Button.Primary}" Content="{DynamicResource str.about.link.repo}" Margin="0,0,8,8"/>
+                    <Button x:Name="LinkReleases" Tag="releases" Style="{DynamicResource Button.Secondary}" Content="{DynamicResource str.about.link.releases}" Margin="0,0,8,8"/>
+                    <Button x:Name="LinkSite" Tag="site" Style="{DynamicResource Button.Secondary}" Content="{DynamicResource str.about.link.site}" Margin="0,0,8,8"/>
+                    <Button x:Name="LinkIssues" Tag="issues" Style="{DynamicResource Button.Secondary}" Content="{DynamicResource str.about.link.issues}" Margin="0,0,8,8"/>
+                </WrapPanel>
+            </StackPanel>
+        </Border>
+
+        <Border Style="{DynamicResource Card}" Padding="24,20" Margin="0,0,0,14">
+            <StackPanel>
+                <TextBlock Text="{DynamicResource str.about.developer}" Style="{DynamicResource Text.H2}"/>
+                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                    <Border Width="56" Height="56" CornerRadius="28" Background="{DynamicResource Brush.SurfaceAlt}" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" VerticalAlignment="Center">
+                        <TextBlock Text="JP" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <StackPanel Margin="16,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="{DynamicResource str.about.dev.name}" FontSize="17" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text}"/>
+                        <TextBlock Text="@joseook" Style="{DynamicResource Text.Muted}"/>
+                        <TextBlock Text="{DynamicResource str.about.dev.role}" Style="{DynamicResource Text.Muted}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </StackPanel>
+                <WrapPanel Margin="0,16,0,0">
+                    <Button x:Name="LinkGitHub" Tag="github" Style="{DynamicResource Button.Secondary}" Margin="0,0,8,8">
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE943;" FontFamily="{DynamicResource Font.Icons}" Margin="0,0,8,0" VerticalAlignment="Center"/><TextBlock Text="GitHub"/></StackPanel>
+                    </Button>
+                    <Button x:Name="LinkLinkedIn" Tag="linkedin" Style="{DynamicResource Button.Secondary}" Margin="0,0,8,8">
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE77B;" FontFamily="{DynamicResource Font.Icons}" Margin="0,0,8,0" VerticalAlignment="Center"/><TextBlock Text="LinkedIn"/></StackPanel>
+                    </Button>
+                    <Button x:Name="LinkX" Tag="x" Style="{DynamicResource Button.Secondary}" Margin="0,0,8,8">
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8BD;" FontFamily="{DynamicResource Font.Icons}" Margin="0,0,8,0" VerticalAlignment="Center"/><TextBlock Text="X (@joseokdev)"/></StackPanel>
+                    </Button>
+                    <Button x:Name="LinkPortfolio" Tag="portfolio" Style="{DynamicResource Button.Secondary}" Margin="0,0,8,8">
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE774;" FontFamily="{DynamicResource Font.Icons}" Margin="0,0,8,0" VerticalAlignment="Center"/><TextBlock Text="joseok.cloud"/></StackPanel>
+                    </Button>
+                    <Button x:Name="LinkEmail" Tag="email" Style="{DynamicResource Button.Secondary}" Margin="0,0,8,8">
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE715;" FontFamily="{DynamicResource Font.Icons}" Margin="0,0,8,0" VerticalAlignment="Center"/><TextBlock Text="hello@joseok.cloud"/></StackPanel>
+                    </Button>
+                </WrapPanel>
+            </StackPanel>
+        </Border>
+
+        <Border Style="{DynamicResource Card}" Padding="24,20" Margin="0,0,0,14">
+            <StackPanel>
+                <TextBlock Text="{DynamicResource str.about.environment}" Style="{DynamicResource Text.H2}"/>
+                <DataGrid x:Name="AboutGrid" Style="{DynamicResource Grid.Data}" Margin="0,6,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <Border Style="{DynamicResource Card}" Padding="24,20">
+            <StackPanel>
+                <TextBlock Text="{DynamicResource str.about.principles}" Style="{DynamicResource Text.H2}"/>
+                <TextBlock Text="{DynamicResource str.about.principles-text}" Style="{DynamicResource Text.Body}" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</ScrollViewer>

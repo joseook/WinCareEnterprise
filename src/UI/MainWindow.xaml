@@ -37,12 +37,13 @@
                     <ListBoxItem Tag="security"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xEA18;" FontFamily="{DynamicResource Font.Icons}" Width="26" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource str.nav.security}"/></StackPanel></ListBoxItem>
                     <ListBoxItem Tag="reports"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE81C;" FontFamily="{DynamicResource Font.Icons}" Width="26" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource str.nav.reports}"/></StackPanel></ListBoxItem>
                     <ListBoxItem Tag="settings"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE713;" FontFamily="{DynamicResource Font.Icons}" Width="26" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource str.nav.settings}"/></StackPanel></ListBoxItem>
+                    <ListBoxItem Tag="about"><StackPanel Orientation="Horizontal"><TextBlock Text="&#xE946;" FontFamily="{DynamicResource Font.Icons}" Width="26" VerticalAlignment="Center"/><TextBlock Text="{DynamicResource str.nav.about}"/></StackPanel></ListBoxItem>
                 </ListBox>
             </DockPanel>
         </Border>
 
         <!-- Main area -->
-        <Grid Grid.Column="1">
+        <Grid x:Name="MainArea" Grid.Column="1">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>

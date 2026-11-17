@@ -29,6 +29,20 @@ $script:PageDefs = [ordered]@{
     security    = @{ Xaml = 'Security.xaml' }
     reports     = @{ Xaml = 'Reports.xaml' }
     settings    = @{ Xaml = 'Settings.xaml' }
+    about       = @{ Xaml = 'About.xaml' }
+}
+
+# "About" page links: fixed allowlist, never built from data.
+$script:WcAboutLinks = @{
+    repo      = 'https://github.com/joseook/WinCareEnterprise'
+    releases  = 'https://github.com/joseook/WinCareEnterprise/releases'
+    issues    = 'https://github.com/joseook/WinCareEnterprise/issues'
+    site      = 'https://wincare.joseok.cloud'
+    github    = 'https://github.com/joseook'
+    linkedin  = 'https://www.linkedin.com/in/joseok/'
+    x         = 'https://x.com/joseokdev'
+    portfolio = 'https://joseok.cloud'
+    email     = 'mailto:hello@joseok.cloud'
 }
 
 # ------------------------------------------------------------------ helpers --
@@ -533,6 +547,72 @@ function Get-WcSelectedAnalysisRow {
     return $null
 }
 
+function Open-WcAboutLink {
+    param([string] $Key)
+    if (-not $script:WcAboutLinks.ContainsKey($Key)) { return }
+    $url = $script:WcAboutLinks[$Key]
+    Write-WcLog -Category 'UI' -Message ('Opening link: {0}' -f $url) | Out-Null
+    Start-Process -FilePath $url | Out-Null
+}
+
+function Update-WcAboutPage {
+    $p = $script:Ui.Pages['about']; if (-not $p) { return }
+    $p.FindName('AboutTagline').Text = Get-WcString 'about.tagline'
+    $p.FindName('AboutVersion').Text = 'v' + $script:Ui.Version
+    $rows = @()
+    $s = $script:Ui.Snapshot
+    if ($s -and $s.System -and $s.System.Windows) {
+        $w = $s.System.Windows
+        $rows += [pscustomobject]@{ Item = 'Windows'; Value = ('{0} {1} | build {2}.{3}' -f $w.Family, $w.Edition, $w.Build, $w.Ubr) }
+    }
+    $rows += [pscustomobject]@{ Item = 'PowerShell'; Value = ('{0} {1}' -f $PSVersionTable.PSVersion, $PSVersionTable['PSEdition']) }
+    $rows += [pscustomobject]@{ Item = (Get-WcString 'about.env.admin'); Value = [string]$script:Ui.IsAdmin }
+    $rows += [pscustomobject]@{ Item = (Get-WcString 'about.env.profile'); Value = (Get-WcString ('profile.' + $script:Ui.Settings.Profile)) }
+    $rows += [pscustomobject]@{ Item = (Get-WcString 'about.env.app'); Value = [string]$script:Ui.AppRoot }
+    $rows += [pscustomobject]@{ Item = (Get-WcString 'about.env.data'); Value = [string](Get-WcDataRoot) }
+    Set-WcGridRows -Grid $p.FindName('AboutGrid') -Rows $rows
+}
+
+# ---------------------------------------------------------------- motion --
+function Test-WcMotionEnabled {
+    <# Off in headless renders and when Windows animations are disabled (accessibility). #>
+    if ($script:Ui.Headless) { return $false }
+    try { return [bool][System.Windows.SystemParameters]::ClientAreaAnimation } catch { return $true }
+}
+
+function Start-WcFadeIn {
+    <# Opacity 0->1 and a short upward slide on $Element. #>
+    param($Element, [int] $Milliseconds = 320, [double] $Offset = 12, [int] $DelayMs = 0)
+    if (-not $Element -or -not (Test-WcMotionEnabled)) { return }
+    $ease = New-Object System.Windows.Media.Animation.CubicEase
+    $ease.EasingMode = [System.Windows.Media.Animation.EasingMode]::EaseOut
+    $dur = New-Object System.Windows.Duration([TimeSpan]::FromMilliseconds($Milliseconds))
+    $begin = [TimeSpan]::FromMilliseconds($DelayMs)
+    $fade = New-Object System.Windows.Media.Animation.DoubleAnimation(0.0, 1.0, $dur)
+    $fade.EasingFunction = $ease; $fade.BeginTime = $begin
+    $Element.Opacity = 0
+    $Element.BeginAnimation([System.Windows.UIElement]::OpacityProperty, $fade)
+    if ($Offset -ne 0) {
+        $tt = New-Object System.Windows.Media.TranslateTransform(0, $Offset)
+        $Element.RenderTransform = $tt
+        $slide = New-Object System.Windows.Media.Animation.DoubleAnimation($Offset, 0.0, $dur)
+        $slide.EasingFunction = $ease; $slide.BeginTime = $begin
+        $tt.BeginAnimation([System.Windows.Media.TranslateTransform]::YProperty, $slide)
+    }
+}
+
+function Start-WcEntranceAnimation {
+    <# Window fades in, the main area rises, navigation items cascade. #>
+    $w = $script:Ui.Window
+    if (-not (Test-WcMotionEnabled)) { return }
+    Start-WcFadeIn -Element $w.FindName('MainArea') -Milliseconds 420 -Offset 16 -DelayMs 60
+    $i = 0
+    foreach ($item in @($w.FindName('NavList').Items)) {
+        Start-WcFadeIn -Element $item -Milliseconds 260 -Offset 8 -DelayMs (80 + 28 * $i)
+        $i++
+    }
+}
+
 function Update-WcActionsPage {
     param([string] $PageId)
     $p = $script:Ui.Pages[$PageId]; if (-not $p) { return }
@@ -731,6 +811,7 @@ function Update-WcAllPages {
     Update-WcSecurityPage
     Update-WcReportsPage
     Update-WcSettingsPage
+    Update-WcAboutPage
     foreach ($id in $script:PageDefs.Keys) { if ($script:PageDefs[$id].Actions) { Update-WcActionsPage -PageId $id } }
 }
 
@@ -853,8 +934,14 @@ function Get-WcPage {
         $page.FindName('PreviewButton').Add_Click({ param($sender, $e) Invoke-WcUiSafe { Start-WcActionRun -PageId ([string]$sender.Tag) -DryRun } })
         $page.FindName('RunButton').Add_Click({ param($sender, $e) Invoke-WcUiSafe { Start-WcActionRun -PageId ([string]$sender.Tag) } })
     }
+    if ($PageId -eq 'about') {
+        foreach ($n in 'LinkRepo', 'LinkReleases', 'LinkSite', 'LinkIssues', 'LinkGitHub', 'LinkLinkedIn', 'LinkX', 'LinkPortfolio', 'LinkEmail') {
+            $b = $page.FindName($n)
+            if ($b) { $b.Add_Click({ param($sender, $e) Invoke-WcUiSafe { Open-WcAboutLink -Key ([string]$sender.Tag) } }) }
+        }
+    }
     # Localised column headers for every auto-generated DataGrid on the page.
-    foreach ($gridName in @('SystemGrid', 'ErrorsGrid', 'StorageGrid', 'ProcessGrid', 'StartupGrid', 'ManagementGrid', 'ProtectionGrid', 'HistoryGrid', 'ResultGrid', 'DetailGrid', 'ActionsHistoryGrid')) {
+    foreach ($gridName in @('AboutGrid', 'SystemGrid', 'ErrorsGrid', 'StorageGrid', 'ProcessGrid', 'StartupGrid', 'ManagementGrid', 'ProtectionGrid', 'HistoryGrid', 'ResultGrid', 'DetailGrid', 'ActionsHistoryGrid')) {
         $g = $page.FindName($gridName)
         if ($g) { Register-WcGrid -Grid $g }
     }
@@ -871,6 +958,7 @@ function Show-WcPage {
     $page = Get-WcPage -PageId $PageId
     $script:Ui.CurrentPage = $PageId
     $script:Ui.Window.FindName('PageHost').Content = $page
+    Start-WcFadeIn -Element $page -Milliseconds 200 -Offset 6
     Update-WcPageTitle
     Update-WcAllPages
 }
@@ -957,6 +1045,8 @@ function Show-WcMainWindow {
         [switch] $NoAutoDiagnostic
     )
     $window = Initialize-WcUi -AppRoot $AppRoot -Version $Version -Settings $Settings -AutoDiagnostic (-not $NoAutoDiagnostic)
+    # Entrance animation before the first frame (Loaded), so nothing flashes.
+    $window.Add_Loaded({ Invoke-WcUiSafe { Start-WcEntranceAnimation } })
     $window.Add_ContentRendered({
             $script:Ui.Timer.Start()
             Write-WcLog -Category 'UI' -Message ('WinCare Enterprise {0} started (PS {1}, admin={2}).' -f $script:Ui.Version, $PSVersionTable.PSVersion, $script:Ui.IsAdmin) | Out-Null

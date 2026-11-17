@@ -1,0 +1,20 @@
+{
+  "nav.about": "About the system",
+  "about.tagline": "Windows diagnostics, maintenance and optimization for technicians and companies — transparent, auditable and with no shortcuts around security.",
+  "about.license": "MIT license",
+  "about.opensource": "Open source",
+  "about.link.repo": "View on GitHub",
+  "about.link.releases": "Releases and changes",
+  "about.link.site": "WinCare website",
+  "about.link.issues": "Report a problem",
+  "about.developer": "Developer",
+  "about.dev.name": "José Paulo Neto Filho",
+  "about.dev.role": "Creator and maintainer of WinCare Enterprise",
+  "about.environment": "This environment",
+  "about.env.admin": "Running as administrator",
+  "about.env.profile": "Operation profile",
+  "about.env.app": "Application folder",
+  "about.env.data": "Data, logs and reports",
+  "about.principles": "How WinCare works",
+  "about.principles-text": "Opening WinCare changes nothing. Every action shows a preview and asks for confirmation, is written to the audit log and follows the chosen profile. No profile disables Defender, Firewall, BitLocker, Windows Update, group policy, MDM, EDR, VPN or authentication, and the execution policy is never bypassed. Every release is signed and verified before it opens."
+}

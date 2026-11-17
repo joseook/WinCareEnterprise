@@ -1,0 +1,20 @@
+{
+  "nav.about": "Sobre o sistema",
+  "about.tagline": "Diagnóstico, manutenção e otimização do Windows para técnicos e empresas — transparente, auditável e sem atalhos que contornem a segurança.",
+  "about.license": "Licença MIT",
+  "about.opensource": "Código aberto",
+  "about.link.repo": "Ver no GitHub",
+  "about.link.releases": "Versões e novidades",
+  "about.link.site": "Site do WinCare",
+  "about.link.issues": "Reportar um problema",
+  "about.developer": "Desenvolvedor",
+  "about.dev.name": "José Paulo Neto Filho",
+  "about.dev.role": "Criador e mantenedor do WinCare Enterprise",
+  "about.environment": "Este ambiente",
+  "about.env.admin": "Executando como administrador",
+  "about.env.profile": "Perfil de operação",
+  "about.env.app": "Pasta do aplicativo",
+  "about.env.data": "Dados, logs e relatórios",
+  "about.principles": "Como o WinCare trabalha",
+  "about.principles-text": "Abrir o WinCare não altera nada. Toda ação mostra uma prévia e pede confirmação, fica registrada no log de auditoria e respeita o perfil escolhido. Nenhum perfil desativa Defender, Firewall, BitLocker, Windows Update, políticas de grupo, MDM, EDR, VPN ou autenticação, e a política de execução nunca é contornada. Cada versão é assinada e verificada antes de abrir."
+}

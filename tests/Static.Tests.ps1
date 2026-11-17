@@ -116,7 +116,7 @@ Describe 'XAML (static)' {
         $main = Get-Content -Raw (Join-Path $script:SrcRoot 'UI/MainWindow.xaml')
         $ui = Get-Content -Raw (Join-Path $script:SrcRoot 'UI/WinCare.UI.psm1')
         $tags = @([regex]::Matches($main, 'Tag="([a-z]+)"') | ForEach-Object { $_.Groups[1].Value })
-        $tags.Count | Should -Be 15
+        $tags.Count | Should -Be 16
         foreach ($t in $tags) {
             $ui | Should -Match ("(?m)^\s+$t\s+= @\{")
             $script:PtKeys | Should -Contain "nav.$t"
