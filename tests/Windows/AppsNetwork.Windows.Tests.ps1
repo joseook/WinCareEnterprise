@@ -93,8 +93,9 @@ Describe 'F6 network page on real Windows' -Tag 'Windows' {
         @($rows.Check) | Should -Be @('Gateway', 'DNS', 'HTTP', 'HTTPS')
         foreach ($r in $rows) { $r.Status | Should -BeIn @('OK', 'Fail', 'Skipped') }
         # The runner has internet access: DNS and HTTPS are expected to work there.
-        ($rows | Where-Object Check -eq 'DNS').Status | Should -Be 'OK'
-        ($rows | Where-Object Check -eq 'HTTPS').Status | Should -Be 'OK'
+        $why = ($rows | ForEach-Object { '{0}={1} ({2})' -f $_.Check, $_.Status, $_.Detail }) -join '; '
+        ($rows | Where-Object Check -eq 'DNS').Status | Should -Be 'OK' -Because $why
+        ($rows | Where-Object Check -eq 'HTTPS').Status | Should -Be 'OK' -Because $why
     }
     It 'parses the real (possibly localized) netsh winhttp output' {
         $rows = @(Get-WcProxyInfo)

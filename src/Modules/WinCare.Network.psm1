@@ -445,10 +445,13 @@ function Get-WcConnectivityCheck {
     $rows += New-WcConnectivityRow -Check 'DNS' -Target $script:WcNcsiHost -Status $st -LatencyMs $d.LatencyMs -Detail $d.Detail
 
     $h = Invoke-WcHttpProbe -Uri $script:WcNcsiUri -Method GET -TimeoutMs $script:WcProbeTimeoutMs
+    # One retry when there was no HTTP answer at all: a single slow handshake is not "no internet".
+    if ($null -eq $h.StatusCode) { $h = Invoke-WcHttpProbe -Uri $script:WcNcsiUri -Method GET -TimeoutMs $script:WcProbeTimeoutMs }
     $v = ConvertTo-WcNcsiVerdict -StatusCode $h.StatusCode -Body $h.Body -ErrorStatus $h.Error
     $rows += New-WcConnectivityRow -Check 'HTTP' -Target $script:WcNcsiUri -Status $v.Status -LatencyMs $h.LatencyMs -Detail $v.Detail
 
     $s = Invoke-WcHttpProbe -Uri $script:WcHttpsProbeUri -Method HEAD -TimeoutMs $script:WcProbeTimeoutMs
+    if ($null -eq $s.StatusCode) { $s = Invoke-WcHttpProbe -Uri $script:WcHttpsProbeUri -Method HEAD -TimeoutMs $script:WcProbeTimeoutMs }
     $v = ConvertTo-WcHttpsVerdict -StatusCode $s.StatusCode -ErrorStatus $s.Error
     $rows += New-WcConnectivityRow -Check 'HTTPS' -Target $script:WcHttpsProbeUri -Status $v.Status -LatencyMs $s.LatencyMs -Detail $v.Detail
     return $rows
