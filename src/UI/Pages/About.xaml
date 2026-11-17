@@ -3,15 +3,19 @@
     <StackPanel Margin="24,20,24,24" MaxWidth="980" HorizontalAlignment="Left">
         <Border Style="{DynamicResource Card}" Padding="24,22" Margin="0,0,0,14">
             <StackPanel>
-                <StackPanel Orientation="Horizontal">
-                    <Border Width="52" Height="52" CornerRadius="12" Background="{DynamicResource Brush.Accent}" VerticalAlignment="Center">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" Width="52" Height="52" CornerRadius="12" Background="{DynamicResource Brush.Accent}" VerticalAlignment="Center">
                         <TextBlock Text="&#xE90F;" FontFamily="{DynamicResource Font.Icons}" FontSize="24" Foreground="{DynamicResource Brush.OnAccent}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
-                    <StackPanel Margin="16,0,0,0" VerticalAlignment="Center">
+                    <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center">
                         <TextBlock Text="WinCare Enterprise" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource Brush.Text}"/>
                         <TextBlock x:Name="AboutTagline" Style="{DynamicResource Text.Muted}" TextWrapping="Wrap"/>
                     </StackPanel>
-                </StackPanel>
+                </Grid>
                 <WrapPanel Margin="-4,14,0,0">
                     <Border Style="{DynamicResource Badge}"><TextBlock x:Name="AboutVersion" Style="{DynamicResource Text.Muted}"/></Border>
                     <Border Style="{DynamicResource Badge}"><TextBlock Text="{DynamicResource str.about.license}" Style="{DynamicResource Text.Muted}"/></Border>
