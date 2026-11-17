@@ -58,7 +58,7 @@ param(
 Set-StrictMode -Version 2.0
 
 # ----------------------------------------------------------- trust anchors --
-$script:WcbDefaultVersion = '0.3.0'
+$script:WcbDefaultVersion = '0.3.1'
 $script:WcbReleaseBaseUri = 'https://github.com/joseook/WinCareEnterprise/releases/download'
 $script:WcbAllowedHosts = @('github.com')
 # Pinned release-signing public keys (RSA, base64 big-endian modulus/exponent).
