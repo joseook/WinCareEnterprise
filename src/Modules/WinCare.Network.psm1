@@ -396,8 +396,11 @@ function Invoke-WcHttpProbe {
         no User-Agent, redirects not followed, short timeout. System proxy is used (as Windows does).
     #>
     param([Parameter(Mandatory = $true)][string] $Uri, [ValidateSet('GET', 'HEAD')][string] $Method = 'GET', [int] $TimeoutMs = 5000)
-    if (([System.Net.ServicePointManager]::SecurityProtocol -band [System.Net.SecurityProtocolType]::Tls12) -eq 0) {
-        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
+    # 'SystemDefault' (0) lets Windows pick TLS 1.2/1.3: keep it. Only old explicit settings
+    # (e.g. Ssl3|Tls on .NET Framework) get TLS 1.2 added.
+    $sp = [System.Net.ServicePointManager]::SecurityProtocol
+    if ([int]$sp -ne 0 -and ($sp -band [System.Net.SecurityProtocolType]::Tls12) -eq 0) {
+        [System.Net.ServicePointManager]::SecurityProtocol = $sp -bor [System.Net.SecurityProtocolType]::Tls12
     }
     $req = [System.Net.WebRequest]::Create($Uri)
     $req.Method = $Method
@@ -450,8 +453,8 @@ function Get-WcConnectivityCheck {
     $v = ConvertTo-WcNcsiVerdict -StatusCode $h.StatusCode -Body $h.Body -ErrorStatus $h.Error
     $rows += New-WcConnectivityRow -Check 'HTTP' -Target $script:WcNcsiUri -Status $v.Status -LatencyMs $h.LatencyMs -Detail $v.Detail
 
-    $s = Invoke-WcHttpProbe -Uri $script:WcHttpsProbeUri -Method HEAD -TimeoutMs $script:WcProbeTimeoutMs
-    if ($null -eq $s.StatusCode) { $s = Invoke-WcHttpProbe -Uri $script:WcHttpsProbeUri -Method HEAD -TimeoutMs $script:WcProbeTimeoutMs }
+    $s = Invoke-WcHttpProbe -Uri $script:WcHttpsProbeUri -Method GET -TimeoutMs $script:WcProbeTimeoutMs
+    if ($null -eq $s.StatusCode) { $s = Invoke-WcHttpProbe -Uri $script:WcHttpsProbeUri -Method GET -TimeoutMs $script:WcProbeTimeoutMs }
     $v = ConvertTo-WcHttpsVerdict -StatusCode $s.StatusCode -ErrorStatus $s.Error
     $rows += New-WcConnectivityRow -Check 'HTTPS' -Target $script:WcHttpsProbeUri -Status $v.Status -LatencyMs $s.LatencyMs -Detail $v.Detail
     return $rows
