@@ -18,3 +18,23 @@
 - **Pendente:** homologação em Windows 10/11 cliente; aceite escrito da exceção T7; integração da F5 na interface (diálogo de confirmação com status do ponto de restauração e grade de pontos existentes).
 - **Próximo passo:** checklist `docs/VALIDACAO-WINDOWS.md` em máquina cliente.
 - **Commit:** ver `git log` (main).
+
+## 2026-11-16 (3) — linux (Zorin OS)
+- **Feito:**
+  - v0.2.1 homologada pelo usuário (Windows 11 corporativo).
+  - Tabelas redesenhadas.
+  - Três módulos novos, feitos por agentes em paralelo: Processos, Saúde, Apps+Rede.
+  - Quatro páginas de análise; seleção de linha para ações (encerrar processo, winget, Store).
+- **Bugs do Windows real corrigidos:**
+  - O módulo Storage do Windows transforma MediaType em texto.
+  - `Sort-Object` não é estável no 5.1.
+  - Mocks de cmdlets CDXML.
+- **Release:** v0.3.0 publicado.
+- **Pendente:** validar em Windows cliente as ações novas (winget upgrade, Store reset, renovar IP, Winsock, encerrar processo, relatórios do powercfg).
+- **Commit:** ver `git log` (main).
+
+## 2026-11-25 — linux (Zorin OS)
+- **Feito:** correção relatada pelo usuário: com o PowerShell já elevado, as ações seguiam com a etiqueta "requer administrador". A detecção de admin estava certa (ações liberadas, botão de elevar oculto); a etiqueta era fixa. Agora `Get-WcActionAdminTagKey` (Core, testada) mostra "administrador ativo" quando elevado. Release **v0.3.2** publicado (GitHub Release + gh-pages), CI verde em PS 5.1, PS 7 e Linux; `/run` e `install.ps1` servidos com hash `38DEA8DD…3025D44`; `install.ps1 -VerifyOnly` ponta a ponta OK.
+- **Pendente:** homologação em Windows 10/11 cliente (sem mudança).
+- **Próximo passo:** usuário roda `irm https://wincare.joseok.cloud/run | iex` como admin e confirma "administrador ativo".
+- **Commit:** fbc781c (fix), 96f41be (release).
