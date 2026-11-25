@@ -671,6 +671,13 @@ function Update-WcActionsPage {
             $r.SetResourceReference([System.Windows.Controls.TextBlock]::ForegroundProperty, 'Brush.Muted')
             [void]$panel.Children.Add($r)
         }
+        elseif (@($decision.Warnings).Count -gt 0) {
+            $wt = New-Object System.Windows.Controls.TextBlock
+            $wt.Text = (@($decision.Warnings) | ForEach-Object { Get-WcString $_ }) -join ' '
+            $wt.TextWrapping = 'Wrap'; $wt.FontSize = 12
+            $wt.SetResourceReference([System.Windows.Controls.TextBlock]::ForegroundProperty, 'Brush.Warning')
+            [void]$panel.Children.Add($wt)
+        }
         $cb.Content = $panel
         $border.Child = $cb
         [void]$list.Children.Add($border)
@@ -761,6 +768,8 @@ function Start-WcActionRun {
             $desc = ''; if ($a.ContainsKey('DescriptionKey') -and $a.DescriptionKey) { $desc = Get-WcString $a.DescriptionKey }
             $flag = ''; if ($a.Modifies -and -not $a.Reversible) { $flag = (Get-WcString 'actions.irreversible').ToUpperInvariant() }
             $msg = Get-WcString 'actions.confirm-text' -Arguments @((Get-WcString $a.TitleKey), $desc, (Get-WcString ('actions.risk.' + $a.Risk)), $flag)
+            $warn = @((Test-WcActionAllowed -Action $a -OperationProfile (Get-WcProfile $script:Ui.Settings.Profile) -Context (Get-WcUiContext)).Warnings)
+            if ($warn.Count -gt 0) { $msg = (($warn | ForEach-Object { Get-WcString $_ }) -join "`n") + "`n`n" + $msg }
             $ans = [System.Windows.MessageBox]::Show($script:Ui.Window, $msg, (Get-WcString 'actions.confirm-title'), 'YesNo', 'Warning', 'No')
             if ($ans -eq 'Yes') { $confirmed += $id }
         }
@@ -1079,7 +1088,7 @@ function Export-WcUiSnapshot {
         [string[]] $Theme = @('Dark', 'Light')
     )
     if (-not (Test-Path -LiteralPath $OutputDirectory)) { New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null }
-    $settings = @{ Theme = $Theme[0]; Language = $Language; Profile = 'Diagnostico' }
+    $settings = @{ Theme = $Theme[0]; Language = $Language; Profile = 'Avancado' }
     $window = Initialize-WcUi -AppRoot $AppRoot -Version $Version -Settings $settings -AutoDiagnostic $false
     $script:Ui.Headless = $true
     $script:Ui.Snapshot = $Snapshot

@@ -159,6 +159,7 @@
   "policy.requires-admin": "Requer executar como administrador.",
   "policy.requires-windows": "Requer Windows.",
   "policy.managed-device": "Bloqueado: o dispositivo é gerenciado pela organização.",
+  "policy.managed-warning": "Atenção: dispositivo gerenciado pela organização. A TI pode ter políticas para isso; execute só se tiver certeza.",
   "policy.managed-strict": "Bloqueado pelo perfil Corporativo (ação sensível a políticas gerenciadas).",
   "policy.build-unsupported": "Build do Windows não suportado para esta ação.",
   "policy.edition-unsupported": "Edição do Windows não suportada para esta ação.",

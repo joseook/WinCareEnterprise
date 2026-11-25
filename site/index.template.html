@@ -97,7 +97,7 @@
       <article class="card reveal"><h3>Processos e memória</h3><p>Quem está consumindo RAM, suspeita de vazamento, programas em segundo plano sem assinatura e CPU agora. Encerra um processo com proteção a sistema e segurança.</p></article>
       <article class="card reveal"><h3>Saúde do sistema</h3><p>Telas azuis, desligamentos inesperados, erros de disco e hardware, drivers com problema, desgaste do SSD, bateria e tarefas de inicialização de terceiros.</p></article>
       <article class="card reveal"><h3>Otimização</h3><p>Limpeza de temporários com prévia do espaço, ReTrim em SSD, comparação antes/depois e ponto de restauração quando a Proteção do Sistema está ligada.</p></article>
-      <article class="card reveal"><h3>Integridade do Windows</h3><p>SFC, DISM e CHKDSK oficiais, com a saída interpretada e registrada. Os reparos ficam bloqueados em máquina gerenciada.</p></article>
+      <article class="card reveal"><h3>Integridade do Windows</h3><p>SFC, DISM e CHKDSK oficiais, com a saída interpretada e registrada. Em máquina gerenciada, os reparos pedem confirmação com aviso (bloqueio total no perfil Corporativo).</p></article>
       <article class="card reveal"><h3>Aplicativos e reparos</h3><p>Programas instalados, desinstaladores quebrados, atualizações via winget (só as que você escolher) e redefinição de apps da Store.</p></article>
       <article class="card reveal"><h3>Rede</h3><p>Adaptadores, testes de gateway, DNS e internet, proxy e VPN. Limpa o cache DNS, renova IP e redefine o Winsock com confirmação.</p></article>
       <article class="card reveal"><h3>Microsoft Office</h3><p>Versão, canal, suplementos e o tempo de abertura do Word em modo normal e seguro, para achar o que deixa o Word lento.</p></article>
@@ -188,10 +188,10 @@
           <table>
             <thead><tr><th>Perfil</th><th>O que permite</th></tr></thead>
             <tbody>
-              <tr><td>Diagnóstico <span class="tag">padrão</span></td><td>Somente leitura. Nenhuma alteração.</td></tr>
+              <tr><td>Diagnóstico</td><td>Somente leitura. Nenhuma alteração.</td></tr>
               <tr><td>Conservador</td><td>Manutenção de baixo risco, com confirmação por ação.</td></tr>
               <tr><td>Corporativo</td><td>Baixo risco e bloqueio de ações sensíveis a políticas gerenciadas.</td></tr>
-              <tr><td>Avançado</td><td>Ações de risco médio e alto para técnicos (ex.: encerrar processo, redefinir Winsock), sempre com confirmação individual.</td></tr>
+              <tr><td>Avançado <span class="tag">padrão</span></td><td>Todas as ações, inclusive risco médio e alto (ex.: encerrar processo, redefinir Winsock), sempre com confirmação individual. Em máquina gerenciada, mostra um aviso em vez de bloquear.</td></tr>
             </tbody>
           </table>
         </div>

@@ -243,7 +243,9 @@ function Get-WcLocalizedValue {
 # ---------------------------------------------------------------- settings --
 
 function Get-WcDefaultSettings {
-    return @{ Theme = 'Dark'; Language = 'pt-BR'; Profile = 'Diagnostico' }
+    # SettingsVersion 2: default profile became Avancado (practical by default; every
+    # change still needs individual confirmation). Older files are migrated on read.
+    return @{ Theme = 'Dark'; Language = 'pt-BR'; Profile = 'Avancado'; SettingsVersion = 2 }
 }
 
 function Test-WcSettings {
@@ -257,6 +259,7 @@ function Test-WcSettings {
     if ((Get-WcSupportedLanguages) -contains $Settings['Language']) { $clean.Language = $Settings['Language'] }
     if ((Get-WcProfile -All).Name -contains $Settings['Profile']) { $clean.Profile = $Settings['Profile'] }
     foreach ($k in $defaults.Keys) {
+        if ($k -eq 'SettingsVersion') { continue }
         if ($Settings.ContainsKey($k) -and $Settings[$k] -ne $clean[$k]) {
             Write-WcLog -Level Warning -Category 'Settings' -Message ("Invalid value for '{0}' replaced by default." -f $k) | Out-Null
         }
@@ -273,7 +276,21 @@ function Read-WcSettings {
         Write-WcLog -Level Warning -Category 'Settings' -Message 'Settings file unreadable; using defaults.' | Out-Null
         return (Get-WcDefaultSettings)
     }
-    return (Test-WcSettings -Settings $raw)
+    return (Test-WcSettings -Settings (Update-WcSettingsVersion -Settings $raw))
+}
+
+function Update-WcSettingsVersion {
+    <# Pure. v1 files (no SettingsVersion) saved the old read-only default 'Diagnostico'
+       without the user choosing it: move them to the new default. #>
+    [CmdletBinding()]
+    param([hashtable] $Settings)
+    if (-not $Settings) { return $Settings }
+    $copy = @{} + $Settings
+    if (-not $copy.ContainsKey('SettingsVersion') -or [int]$copy['SettingsVersion'] -lt 2) {
+        if ($copy['Profile'] -eq 'Diagnostico') { $copy['Profile'] = 'Avancado' }
+        $copy['SettingsVersion'] = 2
+    }
+    return $copy
 }
 
 function Save-WcSettings {
@@ -297,7 +314,7 @@ function Get-WcProfile {
     #>
     [CmdletBinding(DefaultParameterSetName = 'ByName')]
     param(
-        [Parameter(ParameterSetName = 'ByName', Position = 0)][string] $Name = 'Diagnostico',
+        [Parameter(ParameterSetName = 'ByName', Position = 0)][string] $Name = 'Avancado',
         [Parameter(ParameterSetName = 'All')][switch] $All
     )
     $profiles = @(
@@ -484,7 +501,12 @@ function Test-WcActionAllowed {
     if ($Action.RequiresAdmin -and -not $Context.IsAdmin) { $reasons += 'policy.requires-admin' }
     if ($Action.ContainsKey('RequiresWindows') -and $Action.RequiresWindows -and -not $Context.IsWindows) { $reasons += 'policy.requires-windows' }
     $blockedManaged = ($Action.ContainsKey('BlockedWhenManaged') -and $Action.BlockedWhenManaged)
-    if ($blockedManaged -and $Context.IsManaged) { $reasons += 'policy.managed-device' }
+    # Managed device: a hard block only in the strict profiles (Corporativo, Diagnostico);
+    # elsewhere it is a warning shown on the card and in the confirmation dialog.
+    $warnings = @()
+    if ($blockedManaged -and $Context.IsManaged) {
+        if ($OperationProfile.StrictManaged) { $reasons += 'policy.managed-device' } else { $warnings += 'policy.managed-warning' }
+    }
     # Corporate-strict profiles treat "managed sensitive" actions as blocked even when
     # management was not detected: detection can miss signals, policy must not.
     if ($blockedManaged -and $OperationProfile.StrictManaged -and $Action.Modifies -and -not $Context.IsManaged) { $reasons += 'policy.managed-strict' }
@@ -492,7 +514,7 @@ function Test-WcActionAllowed {
     if ($Action.ContainsKey('Editions') -and $Action.Editions) {
         if (@($Action.Editions) -notcontains $Context.EditionId) { $reasons += 'policy.edition-unsupported' }
     }
-    return [pscustomobject]@{ Allowed = ($reasons.Count -eq 0); Reasons = $reasons }
+    return [pscustomobject]@{ Allowed = ($reasons.Count -eq 0); Reasons = $reasons; Warnings = $warnings }
 }
 
 function Get-WcActionAdminTagKey {
@@ -956,7 +978,7 @@ Export-ModuleMember -Function @(
     'Test-WcIsWindows', 'Test-WcIsAdmin', 'Get-WcActionAdminTagKey', 'Get-WcDataRoot', 'ConvertTo-WcHashtable', 'Read-WcJsonFile', 'Write-WcTextFile',
     'Initialize-WcLog', 'Set-WcLogSink', 'Get-WcLogPath', 'Write-WcLog', 'Read-WcLog',
     'Get-WcSupportedLanguages', 'Import-WcLocalization', 'Get-WcString', 'Get-WcLocalizedValue',
-    'Get-WcDefaultSettings', 'Test-WcSettings', 'Read-WcSettings', 'Save-WcSettings',
+    'Get-WcDefaultSettings', 'Test-WcSettings', 'Read-WcSettings', 'Update-WcSettingsVersion', 'Save-WcSettings',
     'Get-WcProfile', 'Register-WcActionHandler', 'Get-WcActionHandlerNames', 'Initialize-WcActionHandlers', 'Clear-WcActionHandlers',
     'Test-WcActionDefinition', 'Import-WcActionCatalog', 'New-WcActionResult', 'New-WcContext', 'Test-WcActionAllowed',
     'New-WcPlan', 'Invoke-WcPlan', 'Add-WcHistory', 'Read-WcHistory',

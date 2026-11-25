@@ -159,6 +159,7 @@
   "policy.requires-admin": "Requires running as administrator.",
   "policy.requires-windows": "Requires Windows.",
   "policy.managed-device": "Blocked: the device is managed by the organization.",
+  "policy.managed-warning": "Caution: this device is managed by the organization. IT may have policies for this; run it only if you are sure.",
   "policy.managed-strict": "Blocked by the Corporate profile (action sensitive to managed policies).",
   "policy.build-unsupported": "Windows build not supported for this action.",
   "policy.edition-unsupported": "Windows edition not supported for this action.",

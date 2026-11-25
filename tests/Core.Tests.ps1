@@ -68,7 +68,7 @@ Describe 'Settings' {
         $s = Test-WcSettings -Settings @{ Theme = 'Neon'; Language = 'en-US'; Profile = 'Root' }
         $s.Theme | Should -Be 'Dark'
         $s.Language | Should -Be 'en-US'
-        $s.Profile | Should -Be 'Diagnostico'
+        $s.Profile | Should -Be 'Avancado'
     }
     It 'round-trips through disk' {
         $p = Join-Path $script:Tmp 'settings.json'
@@ -80,7 +80,23 @@ Describe 'Settings' {
     It 'returns defaults for a corrupt file' {
         $p = Join-Path $script:Tmp 'bad.json'
         Set-Content -LiteralPath $p -Value '{ not json'
+        (Read-WcSettings -Path $p).Profile | Should -Be 'Avancado'
+    }
+    It 'migrates the old read-only default (v1 file) to Avancado' {
+        $p = Join-Path $script:Tmp 'v1.json'
+        Set-Content -LiteralPath $p -Value '{ "Theme": "Light", "Language": "pt-BR", "Profile": "Diagnostico" }'
+        $r = Read-WcSettings -Path $p
+        $r.Profile | Should -Be 'Avancado'
+        $r.Theme | Should -Be 'Light'
+        $r.SettingsVersion | Should -Be 2
+    }
+    It 'keeps Diagnostico when chosen after the migration (v2 file)' {
+        $p = Join-Path $script:Tmp 'v2.json'
+        Save-WcSettings -Settings @{ Theme = 'Dark'; Language = 'pt-BR'; Profile = 'Diagnostico' } -Path $p | Out-Null
         (Read-WcSettings -Path $p).Profile | Should -Be 'Diagnostico'
+    }
+    It 'keeps other v1 choices' {
+        (Update-WcSettingsVersion -Settings @{ Profile = 'Corporativo' }).Profile | Should -Be 'Corporativo'
     }
 }
 
@@ -162,10 +178,22 @@ Describe 'Policy engine' {
         Get-WcActionAdminTagKey -Action (New-TestAction @{ RequiresAdmin = $false }) -Context (New-WcContext -IsAdmin $false) | Should -Be ''
         (Test-WcActionAllowed -Action $a -OperationProfile (Get-WcProfile 'Avancado') -Context (New-WcContext -IsAdmin $true -Build 22631)).Reasons | Should -Not -Contain 'policy.requires-admin'
     }
-    It 'blocks managed-sensitive actions on managed devices in every profile' {
+    It 'blocks managed-sensitive actions on managed devices only in the strict profiles' {
         $ctx = New-WcContext -IsAdmin $true -IsManaged $true -Build 22631
         foreach ($p in (Get-WcProfile -All)) {
-            (Test-WcActionAllowed -Action (New-TestAction @{ BlockedWhenManaged = $true; Risk = 'Low' }) -OperationProfile $p -Context $ctx).Allowed | Should -BeFalse
+            $d = Test-WcActionAllowed -Action (New-TestAction @{ BlockedWhenManaged = $true; Risk = 'Low' }) -OperationProfile $p -Context $ctx
+            if ($p.StrictManaged) { $d.Allowed | Should -BeFalse -Because $p.Name }
+            else {
+                $d.Allowed | Should -BeTrue -Because $p.Name
+                @($d.Warnings) | Should -Contain 'policy.managed-warning'
+            }
+        }
+    }
+    It 'the default profile runs every catalog action as admin, even on a managed device' {
+        $cat = Import-WcActionCatalog -Path (Join-Path $script:SrcRoot 'Core/actions.json')
+        $ctx = New-WcContext -IsAdmin $true -IsManaged $true -Build 26100 -EditionId 'Enterprise'
+        foreach ($a in $cat) {
+            (Test-WcActionAllowed -Action $a -OperationProfile (Get-WcProfile (Get-WcDefaultSettings).Profile) -Context $ctx).Reasons | Should -BeNullOrEmpty -Because $a.Id
         }
     }
     It 'Corporativo blocks managed-sensitive actions even without detected management' {
