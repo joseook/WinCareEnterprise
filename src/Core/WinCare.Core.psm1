@@ -495,6 +495,20 @@ function Test-WcActionAllowed {
     return [pscustomobject]@{ Allowed = ($reasons.Count -eq 0); Reasons = $reasons }
 }
 
+function Get-WcActionAdminTagKey {
+    <# Pure. Localization key of the admin tag shown on an action card: none when the action
+       does not need admin, 'actions.admin-ok' when this session is already elevated. #>
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [Parameter(Mandatory = $true)][hashtable] $Action,
+        [Parameter(Mandatory = $true)][hashtable] $Context
+    )
+    if (-not $Action.RequiresAdmin) { return '' }
+    if ($Context.IsAdmin) { return 'actions.admin-ok' }
+    return 'actions.admin'
+}
+
 function New-WcPlan {
     <# Builds an ordered plan for the requested action ids. Unknown ids throw (allowlist). #>
     [CmdletBinding()]
@@ -939,7 +953,7 @@ function Test-WcDriveLetter {
 }
 
 Export-ModuleMember -Function @(
-    'Test-WcIsWindows', 'Test-WcIsAdmin', 'Get-WcDataRoot', 'ConvertTo-WcHashtable', 'Read-WcJsonFile', 'Write-WcTextFile',
+    'Test-WcIsWindows', 'Test-WcIsAdmin', 'Get-WcActionAdminTagKey', 'Get-WcDataRoot', 'ConvertTo-WcHashtable', 'Read-WcJsonFile', 'Write-WcTextFile',
     'Initialize-WcLog', 'Set-WcLogSink', 'Get-WcLogPath', 'Write-WcLog', 'Read-WcLog',
     'Get-WcSupportedLanguages', 'Import-WcLocalization', 'Get-WcString', 'Get-WcLocalizedValue',
     'Get-WcDefaultSettings', 'Test-WcSettings', 'Read-WcSettings', 'Save-WcSettings',

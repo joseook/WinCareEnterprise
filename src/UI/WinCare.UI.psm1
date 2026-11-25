@@ -655,7 +655,8 @@ function Update-WcActionsPage {
             [void]$panel.Children.Add($d)
         }
         $tags = @(Get-WcString ('actions.risk.' + $a.Risk))
-        if ($a.RequiresAdmin) { $tags += Get-WcString 'actions.admin' }
+        $adminKey = Get-WcActionAdminTagKey -Action $a -Context $ctx
+        if ($adminKey) { $tags += Get-WcString $adminKey }
         if ($a.Modifies) { if ($a.Reversible) { $tags += Get-WcString 'actions.reversible' } else { $tags += Get-WcString 'actions.irreversible' } }
         $m = New-Object System.Windows.Controls.TextBlock
         $m.Text = ($tags -join '  |  '); $m.FontSize = 12; $m.Margin = '0,4,0,0'

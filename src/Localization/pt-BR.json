@@ -178,6 +178,7 @@
   "actions.risk.Medium": "Risco médio",
   "actions.risk.High": "Risco alto",
   "actions.admin": "requer administrador",
+  "actions.admin-ok": "administrador ativo",
   "actions.irreversible": "irreversível",
   "actions.reversible": "reversível",
   "actions.blocked": "Bloqueada: {0}",

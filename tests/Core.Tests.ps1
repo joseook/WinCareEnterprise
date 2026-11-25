@@ -155,6 +155,13 @@ Describe 'Policy engine' {
         $ctx = New-WcContext -IsAdmin $false -Build 22631
         (Test-WcActionAllowed -Action (New-TestAction @{ RequiresAdmin = $true }) -OperationProfile (Get-WcProfile 'Avancado') -Context $ctx).Reasons | Should -Contain 'policy.requires-admin'
     }
+    It 'admin tag follows the real elevation state (no "requires administrator" when elevated)' {
+        $a = New-TestAction @{ RequiresAdmin = $true }
+        Get-WcActionAdminTagKey -Action $a -Context (New-WcContext -IsAdmin $true) | Should -Be 'actions.admin-ok'
+        Get-WcActionAdminTagKey -Action $a -Context (New-WcContext -IsAdmin $false) | Should -Be 'actions.admin'
+        Get-WcActionAdminTagKey -Action (New-TestAction @{ RequiresAdmin = $false }) -Context (New-WcContext -IsAdmin $false) | Should -Be ''
+        (Test-WcActionAllowed -Action $a -OperationProfile (Get-WcProfile 'Avancado') -Context (New-WcContext -IsAdmin $true -Build 22631)).Reasons | Should -Not -Contain 'policy.requires-admin'
+    }
     It 'blocks managed-sensitive actions on managed devices in every profile' {
         $ctx = New-WcContext -IsAdmin $true -IsManaged $true -Build 22631
         foreach ($p in (Get-WcProfile -All)) {
