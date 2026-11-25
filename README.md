@@ -2,7 +2,7 @@
 
 Ferramenta open source de diagnóstico e manutenção do Windows para técnicos e ambientes corporativos. PowerShell-first, interface WPF, sem instalador, sem `-ExecutionPolicy Bypass`.
 
-> **Estado: v0.3.1 — diagnóstico, manutenção, processos e memória, saúde do sistema, aplicativos e rede; PowerShell 5.1 e 7.** Desenvolvido em Linux e testado no **Windows PowerShell 5.1 e no PowerShell 7 em Windows real** pelo CI (GitHub Actions, Windows Server): Pester, coleta CIM real, renderização WPF das 11 páginas e assinatura Authenticode com `AllSigned`. **Ainda falta homologar em Windows 10/11 cliente** com o checklist interativo (`docs/VALIDACAO-WINDOWS.md`). Matriz em `docs/COMPATIBILIDADE.md`.
+> **Estado: v0.3.2 — diagnóstico, manutenção, processos e memória, saúde do sistema, aplicativos e rede; PowerShell 5.1 e 7.** Desenvolvido em Linux e testado no **Windows PowerShell 5.1 e no PowerShell 7 em Windows real** pelo CI (GitHub Actions, Windows Server): Pester, coleta CIM real, renderização WPF das 11 páginas e assinatura Authenticode com `AllSigned`. **Ainda falta homologar em Windows 10/11 cliente** com o checklist interativo (`docs/VALIDACAO-WINDOWS.md`). Matriz em `docs/COMPATIBILIDADE.md`.
 
 ## Executar
 
@@ -15,7 +15,7 @@ irm https://wincare.joseok.cloud/run | iex
 Ou o comando **verificado**, com o hash do `install.ps1` fixado aqui no README (canal independente do site):
 
 ```powershell
-$f="$env:TEMP\wincare-install.ps1"; iwr https://wincare.joseok.cloud/install.ps1 -UseBasicParsing -OutFile $f; if ((Get-FileHash $f -Algorithm SHA256).Hash -eq 'D0099E99AE846DA2508D209B82584AA5F3276589E04670EE71AF2ACCE26AB861') { powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File $f } else { Write-Error 'install.ps1 nao confere - nada foi executado' }
+$f="$env:TEMP\wincare-install.ps1"; iwr https://wincare.joseok.cloud/install.ps1 -UseBasicParsing -OutFile $f; if ((Get-FileHash $f -Algorithm SHA256).Hash -eq '38DEA8DD2CE34E06B1A4E674145311C23FB5EC01E9A9D5FD9BCF1711E3025D44') { powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File $f } else { Write-Error 'install.ps1 nao confere - nada foi executado' }
 ```
 
 Os dois só executam o `install.ps1` da versão se o SHA-256 conferir. Ele baixa o pacote do GitHub Releases e verifica a assinatura RSA do manifesto (chave fixada), o hash do zip e o de cada arquivo antes de abrir. Como administrador, a cópia verificada fica em `Program Files\WinCare`. Na interface, **Executar como administrador** reabre pelo mesmo caminho verificado.
