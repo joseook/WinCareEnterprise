@@ -12,9 +12,9 @@
 <meta property="og:description" content="Diagnóstico e manutenção do Windows, sem atalhos que contornem a segurança. Open source (MIT).">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://wincare.joseok.cloud/">
-<link rel="stylesheet" href="styles.css?v=0.3.1">
-<link rel="icon" href="assets/icon.svg?v=0.3.1" type="image/svg+xml">
-<script src="app.js?v=0.3.1" defer></script>
+<link rel="stylesheet" href="styles.css?v=0.3.2">
+<link rel="icon" href="assets/icon.svg?v=0.3.2" type="image/svg+xml">
+<script src="app.js?v=0.3.2" defer></script>
 </head>
 <body>
 <a class="skip" href="#instalar">Pular para o comando</a>
@@ -22,7 +22,7 @@
 <header class="top">
   <div class="wrap top__in">
     <a class="brand" href="#" aria-label="WinCare Enterprise, início">
-      <img src="assets/icon.svg?v=0.3.1" width="28" height="28" alt="">
+      <img src="assets/icon.svg?v=0.3.2" width="28" height="28" alt="">
       <span>WinCare <em>Enterprise</em></span>
     </a>
     <nav class="top__nav" aria-label="Seções">
@@ -39,7 +39,7 @@
   <!-- HERO: the command first (Mobbin refs: Giga install pill, Hermes Agent tabbed install box). -->
   <section class="hero" id="instalar">
     <div class="wrap hero__in">
-      <p class="eyebrow reveal">Open source · MIT · Windows 10 e 11 · v0.3.1</p>
+      <p class="eyebrow reveal">Open source · MIT · Windows 10 e 11 · v0.3.2</p>
       <h1 class="reveal">Diagnóstico e manutenção do Windows, <span class="accent">sem atalhos perigosos.</span></h1>
       <p class="lead reveal">Descubra o que está deixando o computador lento, aplique manutenção com prévia e confirmação, e acompanhe tudo num log de auditoria. Abrir o WinCare não altera nada.</p>
 
@@ -59,7 +59,7 @@
         <div class="install__pane" role="tabpanel" id="pane-verified" aria-labelledby="tab-verified" hidden>
           <div class="cmd cmd--long">
             <span class="cmd__prompt" aria-hidden="true">PS&gt;</span>
-            <code id="cmd-verified">$f=&quot;$env:TEMP\wincare-install.ps1&quot;; iwr https://wincare.joseok.cloud/install.ps1 -UseBasicParsing -OutFile $f; if ((Get-FileHash $f -Algorithm SHA256).Hash -eq &#39;D0099E99AE846DA2508D209B82584AA5F3276589E04670EE71AF2ACCE26AB861&#39;) { powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File $f } else { Write-Error &#39;install.ps1 nao confere - nada foi executado&#39; }</code>
+            <code id="cmd-verified">$f=&quot;$env:TEMP\wincare-install.ps1&quot;; iwr https://wincare.joseok.cloud/install.ps1 -UseBasicParsing -OutFile $f; if ((Get-FileHash $f -Algorithm SHA256).Hash -eq &#39;38DEA8DD2CE34E06B1A4E674145311C23FB5EC01E9A9D5FD9BCF1711E3025D44&#39;) { powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File $f } else { Write-Error &#39;install.ps1 nao confere - nada foi executado&#39; }</code>
             <button class="copy" data-copy="cmd-verified" aria-label="Copiar comando verificado">Copiar</button>
           </div>
           <p class="install__hint">O hash do <code>install.ps1</code> fica fixado no próprio comando. Indicado para auditoria e ambientes corporativos.</p>
@@ -73,7 +73,7 @@
       </ul>
     </div>
     <figure class="shot shot--hero reveal">
-      <img src="assets/overview.webp?v=0.3.1" width="1028" height="749" alt="Tela Visão geral do WinCare: Windows, CPU, memória, disco, tempo ligado e gerenciamento corporativo" fetchpriority="high">
+      <img src="assets/overview.webp?v=0.3.2" width="1028" height="749" alt="Tela Visão geral do WinCare: Windows, CPU, memória, disco, tempo ligado e gerenciamento corporativo" fetchpriority="high">
     </figure>
   </section>
 
@@ -110,10 +110,10 @@
       <h2 id="gal-title">Renderizadas no Windows pelo CI a cada versão</h2>
     </header>
     <div class="gallery__grid">
-      <figure class="shot reveal"><img src="assets/processes.webp?v=0.3.1" width="1028" height="749" loading="lazy" decoding="async" alt="Página Processos e memória com visão geral da memória e maiores consumidores"><figcaption>Processos e memória</figcaption></figure>
-      <figure class="shot reveal"><img src="assets/health.webp?v=0.3.1" width="1028" height="749" loading="lazy" decoding="async" alt="Página Saúde do sistema com eventos críticos, falhas de aplicativos e drivers"><figcaption>Saúde do sistema</figcaption></figure>
-      <figure class="shot reveal"><img src="assets/network.webp?v=0.3.1" width="1028" height="749" loading="lazy" decoding="async" alt="Página Rede com adaptadores e testes de conectividade"><figcaption>Rede</figcaption></figure>
-      <figure class="shot reveal"><img src="assets/apps-light.webp?v=0.3.1" width="1028" height="749" loading="lazy" decoding="async" alt="Página Aplicativos e reparos no tema claro com a lista de programas instalados"><figcaption>Aplicativos e reparos (tema claro)</figcaption></figure>
+      <figure class="shot reveal"><img src="assets/processes.webp?v=0.3.2" width="1028" height="749" loading="lazy" decoding="async" alt="Página Processos e memória com visão geral da memória e maiores consumidores"><figcaption>Processos e memória</figcaption></figure>
+      <figure class="shot reveal"><img src="assets/health.webp?v=0.3.2" width="1028" height="749" loading="lazy" decoding="async" alt="Página Saúde do sistema com eventos críticos, falhas de aplicativos e drivers"><figcaption>Saúde do sistema</figcaption></figure>
+      <figure class="shot reveal"><img src="assets/network.webp?v=0.3.2" width="1028" height="749" loading="lazy" decoding="async" alt="Página Rede com adaptadores e testes de conectividade"><figcaption>Rede</figcaption></figure>
+      <figure class="shot reveal"><img src="assets/apps-light.webp?v=0.3.2" width="1028" height="749" loading="lazy" decoding="async" alt="Página Aplicativos e reparos no tema claro com a lista de programas instalados"><figcaption>Aplicativos e reparos (tema claro)</figcaption></figure>
     </div>
   </section>
 
@@ -203,7 +203,7 @@
         <h3 id="d-offline">Sem internet</h3>
         <p>Baixe do release o zip, o manifesto, o <code>.sig</code> e o <code>install.ps1</code>, leve numa mídia e rode:</p>
         <div class="code"><button class="copy" data-copy="d3" aria-label="Copiar">Copiar</button><pre><code id="d3">powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File E:\install.ps1 `
-  -PackagePath E:\WinCare-0.3.1.zip -ManifestPath E:\WinCare-0.3.1.manifest.json</code></pre></div>
+  -PackagePath E:\WinCare-0.3.2.zip -ManifestPath E:\WinCare-0.3.2.manifest.json</code></pre></div>
 
         <h3 id="d-dados">Dados e remoção</h3>
         <ul>
@@ -228,12 +228,12 @@ Remove-Item "$env:ProgramFiles\WinCare" -Recurse -Force   # só se rodou como ad
           <dd>No console da interface, em Histórico e relatórios, e nos arquivos <code>%LOCALAPPDATA%\WinCare\logs\*.jsonl</code>.</dd>
         </dl>
 
-        <h3 id="d-integridade">Integridade da versão 0.3.1</h3>
+        <h3 id="d-integridade">Integridade da versão 0.3.2</h3>
         <div class="table">
           <table>
             <tbody>
-              <tr><th scope="row"><code>install.ps1</code> SHA-256</th><td><code class="hash">D0099E99AE846DA2508D209B82584AA5F3276589E04670EE71AF2ACCE26AB861</code></td></tr>
-              <tr><th scope="row"><code>WinCare-0.3.1.zip</code> SHA-256</th><td><code class="hash">53B1A575C1E13E2B296587ECCDF097166A98FD6CD6366B680D61B3D49F7D9B94</code></td></tr>
+              <tr><th scope="row"><code>install.ps1</code> SHA-256</th><td><code class="hash">38DEA8DD2CE34E06B1A4E674145311C23FB5EC01E9A9D5FD9BCF1711E3025D44</code></td></tr>
+              <tr><th scope="row"><code>WinCare-0.3.2.zip</code> SHA-256</th><td><code class="hash">0889FDB2EC1DB92E78695A3B1D9CA35458AD864C2CE0473FE02EEC85F71EB8DB</code></td></tr>
             </tbody>
           </table>
         </div>

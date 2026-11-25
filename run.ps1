@@ -1,14 +1,14 @@
 # WinCare Enterprise - launcher for:  irm https://wincare.joseok.cloud/run | iex
 # Read it before running. What it does:
-#   1. downloads install.ps1 of release 0.3.1 and checks its SHA-256 (pinned below);
+#   1. downloads install.ps1 of release 0.3.2 and checks its SHA-256 (pinned below);
 #   2. runs it as a FILE with process-scope RemoteSigned (Group Policy still wins);
 #   3. install.ps1 verifies the RSA-signed release (every file hashed) before starting WinCare.
 # As administrator, files go to Program Files (admin-only write); otherwise to %LOCALAPPDATA%.
 # Stronger alternative (hash pinned on your side): see https://wincare.joseok.cloud
 & {
     $ErrorActionPreference = 'Stop'
-    $v = '0.3.1'
-    $h = 'D0099E99AE846DA2508D209B82584AA5F3276589E04670EE71AF2ACCE26AB861'
+    $v = '0.3.2'
+    $h = '38DEA8DD2CE34E06B1A4E674145311C23FB5EC01E9A9D5FD9BCF1711E3025D44'
     [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
     try { [Net.WebRequest]::DefaultWebProxy.Credentials = [Net.CredentialCache]::DefaultNetworkCredentials } catch { Write-Verbose 'no proxy' }
     $id = [Security.Principal.WindowsIdentity]::GetCurrent()
