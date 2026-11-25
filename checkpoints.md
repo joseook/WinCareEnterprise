@@ -38,3 +38,9 @@
 - **Pendente:** homologação em Windows 10/11 cliente (sem mudança).
 - **Próximo passo:** usuário roda `irm https://wincare.joseok.cloud/run | iex` como admin e confirma "administrador ativo".
 - **Commit:** fbc781c (fix), 96f41be (release).
+
+## 2026-11-25 (2) — linux (Zorin OS)
+- **Feito:** a pedido do usuário ("não deveria vir bloqueado"), v0.3.3: perfil padrão = Avançado (migração de settings v1 "Diagnostico"); em dispositivo gerenciado, ações sensíveis mostram aviso em vez de bloquear (Corporativo/Diagnóstico mantêm bloqueio). Decisão em SECURITY-NOTES. CI verde (5.1, 7, Linux), release e site publicados, `-VerifyOnly` ponta a ponta OK.
+- **Pendente:** homologação em Windows cliente.
+- **Próximo passo:** usuário roda `/run` como admin e confirma ações liberadas.
+- **Commit:** 2ffc1f2 (feat), da78a39 (release).
